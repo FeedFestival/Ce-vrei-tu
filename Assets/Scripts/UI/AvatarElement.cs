@@ -8,6 +8,7 @@ public class AvatarElement : MonoBehaviour
 {
     public Image Avatar;
 
+    public bool ReadOnly;
     public bool IsSelected;
     public int Index;
 
@@ -42,6 +43,8 @@ public class AvatarElement : MonoBehaviour
 
     public void SetSelected()
     {
+        if (ReadOnly) return;
+
         LeanTween.value(Avatar.gameObject, (float value) =>
         {
             Avatar.GetComponent<RectTransform>().sizeDelta = new Vector2(value, value);
@@ -57,6 +60,7 @@ public class AvatarElement : MonoBehaviour
 
     public void UnSelect(bool initial = false)
     {
+        if (ReadOnly) return;
         if (!IsSelected && !initial) return;
 
         IsSelected = false;

@@ -4363,6 +4363,7 @@ MonoBehaviour:
   Name: {fileID: 1787518056}
   Saying: {fileID: 875069633}
   AvatarsContainer: {fileID: 1834054473}
+  AvatarsScrollbar: {fileID: 271106300}
   CancelButton: {fileID: 1895728833}
   SaveButtonText: {fileID: 1535798922}
 --- !u!114 &1534052131
