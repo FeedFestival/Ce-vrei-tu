@@ -28,7 +28,7 @@ public class DataService
 
         if (!File.Exists(filepath))
         {
-            Debug.Log("Database not in Persistent path");
+            DebugPanel.Phone.Log("Database not in Persistent path");
             // if it doesn't ->
             // open StreamingAssets directory and load the db ->
 
@@ -57,7 +57,7 @@ public class DataService
 
 #endif
 
-            Debug.Log("Database written");
+            DebugPanel.Phone.Log("Database written");
         }
 
         var dbPath = filepath;
@@ -66,7 +66,7 @@ public class DataService
         #endregion
 
         _connection = new SQLiteConnection(dbPath, SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create);
-        Debug.Log("Final PATH: " + dbPath);
+        DebugPanel.Phone.Log("Final PATH: " + dbPath);
 
     }
 
@@ -75,13 +75,13 @@ public class DataService
         _connection.DropTable<User>();
         _connection.CreateTable<User>();
 
-        Debug.Log("Created USER TABLE");
+        DebugPanel.Phone.Log("Created USER TABLE");
     }
 
     internal void WriteDefaultData()
     {
 
-        Debug.Log("No Default data to write.");
+        DebugPanel.Phone.Log("No Default data to write.");
     }
 
     public void CreateUser(User user)
@@ -92,7 +92,7 @@ public class DataService
     public void UpdateUser(User user)
     {
         int rowsAffected = _connection.Update(user);
-        Debug.Log("(UPDATE User) rowsAffected : " + rowsAffected);
+        DebugPanel.Phone.Log("(UPDATE User) rowsAffected : " + rowsAffected);
     }
 
     public User GetDeviceUser()

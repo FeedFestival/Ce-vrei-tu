@@ -26,6 +26,7 @@ public class GameHiddenOptions : MonoBehaviour
     public Color32 BlackColor;
     public Color32 WhiteColor;
     public Color32 RedColor;
+    public Color32 LightBlueColor;
     public Color32 FullTransparentColor;
     public Color32 GameNameColor;
 
@@ -34,6 +35,7 @@ public class GameHiddenOptions : MonoBehaviour
 
     [Header("Prefabs")]
     public GameObject AvatarElementPrefab;
+    public GameObject DebugInfoPrefab;
 
     internal float GetTime(float normalTime)
     {
