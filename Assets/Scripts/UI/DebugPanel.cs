@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using Assets.Scripts.Utils;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -24,6 +25,7 @@ public class DebugPanel : MonoBehaviour
     public Transform Content;
     public Text LogsCountText;
 
+    public Scrollbar DebugScrollbar;
     //
 
     private RectTransform _rt;
@@ -34,37 +36,57 @@ public class DebugPanel : MonoBehaviour
     private float _animationSpeed = 0.8f;
 
     private int _logsCount = 0;
+    private string[] _lastErrors;
+
+    private bool _wasInitialised = false;
+
+    private int _toShowButtonCount;
+    private int _toHideButtonCount;
 
     // Start is called before the first frame update
     private void Awake()
     {
         _debugPanel = this;
 
+        Init();
+    }
+
+    private void Init()
+    {
         if (!ShowInGame())
         {
-            ActionPanel.SetActive(false);
-            DebugContainerPanel.SetActive(false);
+            ShowDebugger(false);
             return;
         }
         else
         {
-            ActionPanel.SetActive(true);
-            DebugContainerPanel.SetActive(false);
+            ShowDebugger(true);
         }
 
+        _wasInitialised = true;
+
         _rt = GetComponent<RectTransform>();
-        _screenHeight = gameObject.transform.parent.GetComponent<RectTransform>().sizeDelta.y;
-        var screenWidth = gameObject.transform.parent.GetComponent<RectTransform>().sizeDelta.x;
 
-        _originalYPos = _rt.localPosition.y;
-        _expandedYPos = _originalYPos - _screenHeight;
+        var actualHeight = gameObject.transform.parent.GetComponent<RectTransform>().sizeDelta.y;
+        var actualWidth = gameObject.transform.parent.GetComponent<RectTransform>().sizeDelta.x;
 
-        _rt.sizeDelta = new Vector2(screenWidth, _screenHeight);
+        _screenHeight = gameObject.transform.parent.GetComponent<CanvasScaler>().referenceResolution.y;
+        var screenWidth = gameObject.transform.parent.GetComponent<CanvasScaler>().referenceResolution.x;
+
+        //Debug.Log(" actualWidth: " + actualWidth + ", actualHeight: " + actualHeight + ", _screenHeight: " + _screenHeight + ", screenWidth: " + screenWidth);
+
+        _originalYPos = 1280;
+        _expandedYPos = 0;
+
+        _rt.sizeDelta = new Vector2(_rt.sizeDelta.x, _screenHeight);
+        _rt.anchoredPosition = new Vector3(_rt.position.x, _originalYPos, _rt.position.z);
 
         if (IsExpanded)
             Expand();
 
         LogsCountText.transform.parent.gameObject.SetActive(false);
+
+        ShowSavedErrors();
     }
 
     public void DebugClicked()
@@ -81,7 +103,7 @@ public class DebugPanel : MonoBehaviour
         {
             LeanTween.value(gameObject, (float value) =>
             {
-                _rt.localPosition = new Vector3(_rt.localPosition.x, value, _rt.localPosition.z);
+                _rt.anchoredPosition = new Vector3(_rt.position.x, value, _rt.position.z);
             }, _expandedYPos, _originalYPos, _animationSpeed).setEase(LeanTweenType.easeInOutBack);
         }
     }
@@ -92,8 +114,11 @@ public class DebugPanel : MonoBehaviour
 
         LeanTween.value(gameObject, (float value) =>
         {
-            _rt.localPosition = new Vector3(_rt.localPosition.x, value, _rt.localPosition.z);
+            _rt.anchoredPosition = new Vector3(_rt.position.x, value, _rt.position.z);
         }, _originalYPos, _expandedYPos, _animationSpeed).setEase(LeanTweenType.easeInOutBack);
+
+        DebugScrollbar.value = 0f;
+        SetLogCount(reset: true);
     }
 
     public void Log(string message, LogType type = LogType.Log)
@@ -106,38 +131,76 @@ public class DebugPanel : MonoBehaviour
         go.transform.SetParent(Content);
         go.GetComponent<RectTransform>().localScale = new Vector3(1, 1, 1);
 
-        go.GetComponent<DebugInfo>().SetText(message, _screenHeight);
+        System.DateTime localDate = System.DateTime.Now;
+        go.GetComponent<DebugInfo>().SetText(localDate.ToString() + "\n" + message, _screenHeight);
 
-        _logsCount++;
+        SetLogCount();
 
         go.name = _logsCount + (type == LogType.Log ? "_log" : "_error");
+    }
 
+    private void SetLogCount(bool reset = false)
+    {
+        if (reset)
+        {
+            _logsCount = 0;
+            LogsCountText.transform.parent.gameObject.SetActive(false);
+            return;
+        }
+        _logsCount++;
         LogsCountText.transform.parent.gameObject.SetActive(true);
         LogsCountText.text = _logsCount.ToString();
     }
 
     private void OnEnable()
     {
-        if (!ShowInGame()) return;
-
         Application.logMessageReceived += HandleLog;
     }
 
     private void OnDisable()
     {
-        if (!ShowInGame()) return;
-
         // Remove callback when object goes out of scope
         Application.logMessageReceived -= HandleLog;
     }
 
     private void HandleLog(string logString, string stackTrace, LogType type)
     {
-        if (!ShowInGame()) return;
-
         if (type == LogType.Error || type == LogType.Exception)
         {
-            Log(logString + " \n " + stackTrace, type);
+            System.DateTime localDate = System.DateTime.Now;
+            var error = "<color=#ff0000ff>" + localDate.ToString() + "</color>\n" + logString + "\n" + stackTrace;
+            if (!ShowInGame())
+            {
+                SaveErrors(error);
+                return;
+            }
+
+            Log(error, type);
+        }
+    }
+
+    private void SaveErrors(string error)
+    {
+        if (_lastErrors == null)
+        {
+            _lastErrors = new string[3] { "", "", "" };
+        }
+
+        _lastErrors[0] = _lastErrors[1];
+        _lastErrors[1] = _lastErrors[2];
+        _lastErrors[2] = error;
+    }
+
+    private void ShowSavedErrors()
+    {
+        if (_lastErrors != null)
+        {
+            for (var i = 0; i < _lastErrors.Length; i++)
+            {
+                if (string.IsNullOrWhiteSpace(_lastErrors[i]) == false)
+                    Log(_lastErrors[i], LogType.Error);
+            }
+            _lastErrors = null;
         }
     }
 
@@ -145,16 +208,61 @@ public class DebugPanel : MonoBehaviour
     {
         if (Application.isEditor)
         {
-            if (Show == false && ShowInEditor == false)
+            if (Show == true && ShowInEditor == false)
                 return false;
+            //else if (Show == false && ShowInEditor == true)
+            //    return true;
             else
-                return true;
+                return Show;
         }
         else
         {
-            if (Show == false)
-                return false;
-            return true;
+            return Show;
         }
+    }
+
+    public void ShowDebugPanel()
+    {
+        if (ShowInGame()) return;
+
+        _toShowButtonCount++;
+        if (_toShowButtonCount > 5)
+        {
+            Show = true;
+            _toHideButtonCount = 0;
+
+            if (Application.isEditor)
+                ShowInEditor = true;
+
+            if (_wasInitialised == false)
+                Init();
+            else
+            {
+                ShowDebugger(true);
+                ShowSavedErrors();
+            }
+        }
+    }
+    public void HideDebugPanel()
+    {
+        if (!ShowInGame()) return;
+
+        _toHideButtonCount++;
+        if (_toHideButtonCount > 5)
+        {
+            Show = false;
+            _toShowButtonCount = 0;
+
+            if (Application.isEditor)
+                ShowInEditor = false;
+
+            ShowDebugger(false);
+        }
+    }
+
+    private void ShowDebugger(bool show)
+    {
+        ActionPanel.SetActive(show);
+        DebugContainerPanel.SetActive(show);
     }
 }

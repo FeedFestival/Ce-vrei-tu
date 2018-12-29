@@ -13,6 +13,10 @@ public class RunNetworkServer : MonoBehaviour
 
     public bool IsRunning;
 
+    public delegate void OnConnectedToServerCallback();
+    public OnConnectedToServerCallback OnConnectedToServer;
+    public delegate void OnDisconnectedFromServerCallback();
+    public OnDisconnectedFromServerCallback OnDisconnectedFromServer;
     public delegate void OnMessageRecievedCallback();
     public OnMessageRecievedCallback OnMessageRecieved;
     //
@@ -132,7 +136,7 @@ public class RunNetworkServer : MonoBehaviour
                 break;
             case NetworkEventType.DataEvent:
                 DebugPanel.Phone.Log("a data event ?");
-                OnMessageRecieved();
+                //OnMessageRecieved();
                 break;
             case NetworkEventType.ConnectEvent:
                 DebugPanel.Phone.Log(string.Format(@"
@@ -140,7 +144,7 @@ public class RunNetworkServer : MonoBehaviour
                     ",
                     connectionId
                     ));
-                OnMessageRecieved();
+                OnConnectedToServer();
                 break;
             case NetworkEventType.DisconnectEvent:
                 DebugPanel.Phone.Log(string.Format(@"
@@ -148,7 +152,7 @@ public class RunNetworkServer : MonoBehaviour
                     ",
                     connectionId
                     ));
-                OnMessageRecieved();
+                OnDisconnectedFromServer();
                 break;
             case NetworkEventType.BroadcastEvent:
                 DebugPanel.Phone.Log("a broadcast event ?");
@@ -157,6 +161,12 @@ public class RunNetworkServer : MonoBehaviour
             default:
                 break;
         }
+    }
+
+    public void StopBroadcast()
+    {
+        NetworkTransport.StopBroadcastDiscovery();
+        NetworkTransport.RemoveHost(_hostId);
     }
 
     private static byte[] StringToBytes(string str)

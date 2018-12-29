@@ -52,6 +52,7 @@ public class RunNetworkManager : NetworkManager
         DebugPanel.Phone.Log(@"Connected: ConnectionId: " + ConnectionId +
             ", error: " + error
             );
+        OnJoin();
     }
 
     IEnumerator IfConnectedSendMessage()

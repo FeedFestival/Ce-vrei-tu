@@ -139,9 +139,11 @@ public class RunNetworkClient : MonoBehaviour
                 System.Buffer.BlockCopy((System.Array)_msgInBuffer, 0, (System.Array)networkBroadcastResult.broadcastData, 0, receivedSize);
                 _broadcastsReceived[address] = networkBroadcastResult;
 
-                OnReceivedBroadcast(address, BytesToString(_msgInBuffer));
+                OnListenSuccess(address, BytesToString(_msgInBuffer));
 
                 IsRunning = false;
+
+                DebugPanel.Phone.Log("Found SOMETHING! address: " + address + ", BytesToString(_msgInBuffer): " + BytesToString(_msgInBuffer));
 
                 break;
             default:
@@ -149,11 +151,10 @@ public class RunNetworkClient : MonoBehaviour
         }
     }
 
-    private void OnReceivedBroadcast(string fromAddress, string data)
+    public void StopListening()
     {
-        OnListenSuccess(fromAddress, data);
-
-
+        NetworkTransport.RemoveHost(HostId);
+        IsRunning = false;
     }
 
     private static byte[] StringToBytes(string str)
