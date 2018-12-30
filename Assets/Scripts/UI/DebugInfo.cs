@@ -20,17 +20,17 @@ public class DebugInfo : MonoBehaviour
         _normalHeight = _layoutElement.preferredHeight;
     }
 
-    public void Expand()
-    {
-        _isExpanded = !_isExpanded;
+    //public void Expand()
+    //{
+    //    _isExpanded = !_isExpanded;
 
-        if (_isExpanded)
-        {
-            _layoutElement.preferredHeight = _screenHeight;
-        }
-        else
-        {
-            _layoutElement.preferredHeight = _normalHeight;
-        }
-    }
+    //    if (_isExpanded)
+    //    {
+    //        _layoutElement.preferredHeight = _screenHeight;
+    //    }
+    //    else
+    //    {
+    //        _layoutElement.preferredHeight = _normalHeight;
+    //    }
+    //}
 }

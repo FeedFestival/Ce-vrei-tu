@@ -22,6 +22,7 @@ public class DebugPanel : MonoBehaviour
     public bool IsExpanded;
     public GameObject DebugContainerPanel;
     public GameObject ActionPanel;
+    public GameObject DebugPanelView;
     public Transform Content;
     public Text LogsCountText;
 
@@ -67,22 +68,10 @@ public class DebugPanel : MonoBehaviour
 
         _rt = GetComponent<RectTransform>();
 
-        //var actualHeight = gameObject.transform.parent.GetComponent<RectTransform>().sizeDelta.y;
-        //var actualWidth = gameObject.transform.parent.GetComponent<RectTransform>().sizeDelta.x;
-
-        _screenHeight = GameHiddenOptions.Instance.CanvasScaler.referenceResolution.y;
-        var screenWidth = GameHiddenOptions.Instance.CanvasScaler.referenceResolution.x;
-
-        //Debug.Log(" actualWidth: " + actualWidth + ", actualHeight: " + actualHeight + ", _screenHeight: " + _screenHeight + ", screenWidth: " + screenWidth);
-
-        _originalYPos = 1280;
-        _expandedYPos = 0;
-
-        _rt.sizeDelta = new Vector2(_rt.sizeDelta.x, _screenHeight);
-        _rt.anchoredPosition = new Vector3(_rt.position.x, _originalYPos, _rt.position.z);
-
         if (IsExpanded)
-            Expand();
+            DebugPanelView.SetActive(true);
+        else
+            DebugPanelView.SetActive(false);
 
         LogsCountText.transform.parent.gameObject.SetActive(false);
 
@@ -97,28 +86,15 @@ public class DebugPanel : MonoBehaviour
 
         if (IsExpanded)
         {
-            Expand();
+            DebugPanelView.SetActive(true);
+
+            DebugScrollbar.value = 0f;
+            SetLogCount(reset: true);
         }
         else
         {
-            LeanTween.value(gameObject, (float value) =>
-            {
-                _rt.anchoredPosition = new Vector3(_rt.position.x, value, _rt.position.z);
-            }, _expandedYPos, _originalYPos, _animationSpeed).setEase(LeanTweenType.easeInOutBack);
+            DebugPanelView.SetActive(false);
         }
-    }
-
-    private void Expand()
-    {
-        if (!ShowInGame()) return;
-
-        LeanTween.value(gameObject, (float value) =>
-        {
-            _rt.anchoredPosition = new Vector3(_rt.position.x, value, _rt.position.z);
-        }, _originalYPos, _expandedYPos, _animationSpeed).setEase(LeanTweenType.easeInOutBack);
-
-        DebugScrollbar.value = 0f;
-        SetLogCount(reset: true);
     }
 
     public void Log(string message, LogType type = LogType.Log)
