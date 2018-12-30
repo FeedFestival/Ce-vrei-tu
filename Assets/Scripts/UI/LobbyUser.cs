@@ -25,7 +25,7 @@ public class LobbyUser : MonoBehaviour
         if (Name.gameObject.activeSelf == false)
             Name.gameObject.SetActive(true);
 
-        Image.sprite = Main.Instance.GetAvatarSprite(user.ProfilePicIndex);
+        Image.sprite = Main._.GetAvatarSprite(user.ProfilePicIndex);
         Name.text = user.Name;
         ConnectionId = user.ConnectionId;
     }

@@ -53,7 +53,7 @@ public class AuthController : MonoBehaviour
             go.transform.SetParent(AvatarsContainer.transform);
             go.GetComponent<RectTransform>().localScale = new Vector3(1, 1, 1);
 
-            Sprite sprite = Main.Instance.GetAvatarSprite(i);
+            Sprite sprite = Main._.GetAvatarSprite(i);
 
             var avatarElement = go.GetComponent<AvatarElement>();
 
@@ -96,7 +96,7 @@ public class AuthController : MonoBehaviour
 
     public void OnCancelClick()
     {
-        Main.Instance.GameMenu.CanvasController.GoToPreviousPanel(Panel.AuthPanel);
+        Main._.GameMenu.CanvasController.GoToPreviousPanel(Panel.AuthPanel);
     }
 
     public void SaveUser()
@@ -121,6 +121,6 @@ public class AuthController : MonoBehaviour
 
             DomainLogic.DB.DataService.UpdateUser(Persistent.GameData.LoggedUser);
         }
-        Main.Instance.GameMenu.CanvasController.ShowPanel(Panel.MainMenuPanel);
+        Main._.GameMenu.CanvasController.ShowPanel(Panel.MainMenuPanel);
     }
 }

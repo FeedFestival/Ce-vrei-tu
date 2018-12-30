@@ -7,6 +7,19 @@ public class Game : MonoBehaviour
 {
 
 
+    internal void LoadDependencies()
+    {
+
+    }
+
+    internal void StartGame()
+    {
+        if (Main._.IsSimulated)
+        {
+
+        }
+    }
+
 
 
 
@@ -45,16 +58,6 @@ public class Game : MonoBehaviour
         //    UiController.TimeSpeedText.text = _timeSpeed.ToString();
         //    Time.timeScale = _timeSpeed;
         //}
-    }
-
-    internal void LoadDependencies()
-    {
-        throw new NotImplementedException();
-    }
-
-    internal void StartGame()
-    {
-        throw new NotImplementedException();
     }
 
     #endregion

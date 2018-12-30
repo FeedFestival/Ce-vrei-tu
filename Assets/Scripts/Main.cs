@@ -7,7 +7,7 @@ using UnityEngine.UI;
 public class Main : MonoBehaviour
 {
     private static Main _main;
-    public static Main Instance
+    public static Main _
     {
         get { return _main; }
     }
@@ -15,20 +15,30 @@ public class Main : MonoBehaviour
     [Header("Game Debug Options")]
     public bool DebugScript;
     public bool SaveMemory;
+    public bool IsSimulated;
 
     [HideInInspector]
     public GameMenu GameMenu;
 
-    [HideInInspector]
     public Game Game;
+    public GameObject PersistentSimulated;
 
     void Awake()
     {
         _main = GetComponent<Main>();
 
-        Game = GetComponent<Game>();
-        if (Game == null) {
+        if (Game == null)
+        {
             GameMenu = GetComponent<GameMenu>();
+        }
+        else
+        {
+            var found = Transform.FindObjectOfType<Persistent>();
+            if (found == null)
+            {
+                IsSimulated = true;
+                var go = Instantiate(PersistentSimulated);
+            }
         }
     }
 
@@ -73,7 +83,8 @@ public class Main : MonoBehaviour
     }
 }
 
-public enum Panel {
+public enum Panel
+{
     None,
     StartPanel, AuthPanel, MainMenuPanel,
     All

@@ -23,7 +23,7 @@ public class CanvasController : MonoBehaviour
 
     internal void LoadDependencies()
     {
-        Main.Instance.GameMenu.CanvasController.LobbyController.Init();
+        Main._.GameMenu.CanvasController.LobbyController.Init();
 
         HidePanel(Panel.All);
     }
