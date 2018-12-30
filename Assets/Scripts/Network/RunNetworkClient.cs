@@ -225,7 +225,7 @@ public class RunNetworkClient : MonoBehaviour
         formatter.Serialize(ms, msg);
 
 
-        NetworkTransport.Send(HostId, Main.Instance.ConnectionId, ReliableChannel, buffer, GameHiddenOptions.MAX_BYTE_SIZE, out error);
+        NetworkTransport.Send(HostId, Persistent.GameData.ConnectionId, ReliableChannel, buffer, GameHiddenOptions.MAX_BYTE_SIZE, out error);
         DebugPanel.Phone.Log("Try Sent message... error: " + (NetworkError)error);
     }
 }

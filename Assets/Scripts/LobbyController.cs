@@ -72,15 +72,15 @@ public class LobbyController : MonoBehaviour
 
     public void UpdateServerList(User newUser, int? disconectedConnectionId = null)
     {
-        if (Main.Instance.ServerUsers == null)
-            Main.Instance.ServerUsers = new List<User>();
+        if (Persistent.GameData.ServerUsers == null)
+            Persistent.GameData.ServerUsers = new List<User>();
 
-        if (Main.Instance.ServerUsers.Count == 0)
-            Main.Instance.ServerUsers.Add(Main.Instance.LoggedUser);
+        if (Persistent.GameData.ServerUsers.Count == 0)
+            Persistent.GameData.ServerUsers.Add(Persistent.GameData.LoggedUser);
 
         if (newUser != null)
         {
-            foreach (var user in Main.Instance.ServerUsers)
+            foreach (var user in Persistent.GameData.ServerUsers)
             {
                 if (newUser.ConnectionId == user.ConnectionId)
                 {
@@ -89,22 +89,22 @@ public class LobbyController : MonoBehaviour
                 }
             }
             if (newUser.AllreadyIn == false)
-                Main.Instance.ServerUsers.Add(newUser);
+                Persistent.GameData.ServerUsers.Add(newUser);
         }
 
-        if (disconectedConnectionId != null && Main.Instance.ServerUsers.Count > 0)
+        if (disconectedConnectionId != null && Persistent.GameData.ServerUsers.Count > 0)
         {
             int index = 0;
-            foreach (var user in Main.Instance.ServerUsers)
+            foreach (var user in Persistent.GameData.ServerUsers)
             {
                 if (disconectedConnectionId == user.ConnectionId)
                     break;
                 index++;
             }
-            Main.Instance.ServerUsers.RemoveAt(index);
+            Persistent.GameData.ServerUsers.RemoveAt(index);
         }
 
-        UpdateView(Main.Instance.ServerUsers);
+        UpdateView(Persistent.GameData.ServerUsers);
     }
 
     private void UpdateView(List<User> users)
@@ -177,7 +177,13 @@ public class LobbyController : MonoBehaviour
 
         return go.GetComponent<LobbyUser>();
     }
-    
+
+    public void StartGame()
+    {
+        // ChangeScene
+        // remove StuffFrom
+    }
+
     /*
     private void Update()
     {

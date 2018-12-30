@@ -32,11 +32,11 @@ public class MainMenuController : MonoBehaviour
 
     internal void Init()
     {
-        Sprite sprite = Resources.Load<Sprite>("Images/Avatars/" + Main.Instance.LoggedUser.ProfilePicIndex);
+        Sprite sprite = Resources.Load<Sprite>("Images/Avatars/" + Persistent.GameData.LoggedUser.ProfilePicIndex);
         TopAvatarElement.SetImage(sprite);
 
-        Name.text = Main.Instance.LoggedUser.Name;
-        PrankCoins.text = UsefullUtils.ConvertNumberToKs(Main.Instance.LoggedUser.PrankCoins);
+        Name.text = Persistent.GameData.LoggedUser.Name;
+        PrankCoins.text = UsefullUtils.ConvertNumberToKs(Persistent.GameData.LoggedUser.PrankCoins);
 
         normalColorBlock = JoinButton.colors;
         normalColorBlock.normalColor = GameHiddenOptions.Instance.RedColor;
@@ -125,8 +125,8 @@ public class MainMenuController : MonoBehaviour
 
         NetClientUser msg = new NetClientUser()
         {
-            Name = Main.Instance.LoggedUser.Name,
-            Pic = Main.Instance.LoggedUser.ProfilePicIndex
+            Name = Persistent.GameData.LoggedUser.Name,
+            Pic = Persistent.GameData.LoggedUser.ProfilePicIndex
         };
         RunNetworkClient.SendToServer(msg);
 
@@ -198,11 +198,11 @@ public class MainMenuController : MonoBehaviour
 
     private void CreateAndSendUserListDataForLobbyClients()
     {
-        if (Main.Instance.ServerUsers == null && Main.Instance.ServerUsers.Count == 0)
+        if (Persistent.GameData.ServerUsers == null && Persistent.GameData.ServerUsers.Count == 0)
             return;
 
         var users = new List<NetClientUser>();
-        foreach (var user in Main.Instance.ServerUsers)
+        foreach (var user in Persistent.GameData.ServerUsers)
         {
             users.Add(new NetClientUser()
             {
@@ -212,7 +212,7 @@ public class MainMenuController : MonoBehaviour
             });
         }
         var netServerUsers = new NetServerUsers() { Users = users };
-        var connectedUsersIds = Main.Instance.ServerUsers.Select(u => u.ConnectionId).ToArray();
+        var connectedUsersIds = Persistent.GameData.ServerUsers.Select(u => u.ConnectionId).ToArray();
         RunNetworkServer.SendToClients(netServerUsers, connectedUsersIds);
     }
 

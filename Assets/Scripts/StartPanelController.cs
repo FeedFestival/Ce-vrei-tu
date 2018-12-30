@@ -82,7 +82,7 @@ public class StartPanelController : MonoBehaviour
 
         LoadingController.Instance.HideLoading(() =>
         {
-            if (Main.Instance.LoggedUser == null)
+            if (Persistent.GameData.LoggedUser == null)
             {
                 Main.Instance.Game.CanvasController.ShowPanel(Panel.AuthPanel);
             }

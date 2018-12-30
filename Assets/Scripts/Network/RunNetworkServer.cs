@@ -200,7 +200,7 @@ public class RunNetworkServer : MonoBehaviour
 
         foreach (var connId in connIds)
         {
-            if (connId == Main.Instance.ConnectionId)
+            if (connId == Persistent.GameData.ConnectionId)
                 continue;
 
             NetworkTransport.Send(_hostId, connId, ReliableChannel, buffer, GameHiddenOptions.MAX_BYTE_SIZE, out error);

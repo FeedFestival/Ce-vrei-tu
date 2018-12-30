@@ -12,18 +12,9 @@ public class Main : MonoBehaviour
         get { return _main; }
     }
 
-    [HideInInspector]
-    public User LoggedUser;
-    [HideInInspector]
-    public List<Sprite> AvatarSprites;
-
     [Header("Game Debug Options")]
     public bool DebugScript;
     public bool SaveMemory;
-
-    [Header("Network Properties")]
-    public int ConnectionId;
-    public List<User> ServerUsers;
 
     [HideInInspector]
     public Game Game;
@@ -60,11 +51,11 @@ public class Main : MonoBehaviour
 
     public Sprite GetAvatarSprite(int index)
     {
-        if ((index - 1) < Main.Instance.AvatarSprites.Count)
-            return Main.Instance.AvatarSprites[index - 1];
+        if ((index - 1) < Persistent.GameData.AvatarSprites.Count)
+            return Persistent.GameData.AvatarSprites[index - 1];
 
         Sprite sprite = Resources.Load<Sprite>("Images/Avatars/" + index);
-        Main.Instance.AvatarSprites.Add(sprite);
+        Persistent.GameData.AvatarSprites.Add(sprite);
         return sprite;
     }
 }

@@ -54,7 +54,7 @@ public class Game : MonoBehaviour
         var time = GameHiddenOptions.Instance.GetTime(GameHiddenOptions.Instance.TimeBeforeSessionCreation);
         yield return new WaitForSeconds(time);
 
-        Main.Instance.LoggedUser = DataService.GetDeviceUser();
+        Persistent.GameData.LoggedUser = DataService.GetDeviceUser();
     }
 
     #endregion

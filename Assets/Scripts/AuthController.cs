@@ -26,17 +26,17 @@ public class AuthController : MonoBehaviour
 
     public void Init()
     {
-        if (Main.Instance.LoggedUser == null)
+        if (Persistent.GameData.LoggedUser == null)
         {
             SaveButtonText.text = "That's me!";
             CancelButton.SetActive(false);
         }
         else
         {
-            Name.InputField.text = Main.Instance.LoggedUser.Name;
+            Name.InputField.text = Persistent.GameData.LoggedUser.Name;
             Name.OnBlur(true);
 
-            Saying.InputField.text = Main.Instance.LoggedUser.Saying;
+            Saying.InputField.text = Persistent.GameData.LoggedUser.Saying;
             Saying.OnBlur(true);
 
             SaveButtonText.text = "This is me now!";
@@ -58,9 +58,9 @@ public class AuthController : MonoBehaviour
             var avatarElement = go.GetComponent<AvatarElement>();
 
             bool isSelected = (i == 1);
-            if (Main.Instance.LoggedUser != null)
+            if (Persistent.GameData.LoggedUser != null)
             {
-                isSelected = (Main.Instance.LoggedUser.ProfilePicIndex == i);
+                isSelected = (Persistent.GameData.LoggedUser.ProfilePicIndex == i);
             }
 
             avatarElement.Init(this, i, isSelected);
@@ -69,7 +69,7 @@ public class AuthController : MonoBehaviour
             AvatarElements.Add(avatarElement);
         }
 
-        if (Main.Instance.LoggedUser != null)
+        if (Persistent.GameData.LoggedUser != null)
             StartCoroutine(SetScrollToAvatar());
     }
 
@@ -77,7 +77,7 @@ public class AuthController : MonoBehaviour
     {
         yield return new WaitForEndOfFrame();
 
-        _selectedPicIndex = Main.Instance.LoggedUser.ProfilePicIndex;
+        _selectedPicIndex = Persistent.GameData.LoggedUser.ProfilePicIndex;
         var percent = UsefullUtils.GetValuePercent(_selectedPicIndex, _numberOfAvatars);
         AvatarsScrollbar.value = percent / 100f;
     }
@@ -101,7 +101,7 @@ public class AuthController : MonoBehaviour
 
     public void SaveUser()
     {
-        if (Main.Instance.LoggedUser == null)
+        if (Persistent.GameData.LoggedUser == null)
         {
 
             var user = new User()
@@ -111,15 +111,15 @@ public class AuthController : MonoBehaviour
                 ProfilePicIndex = _selectedPicIndex
             };
             Main.Instance.Game.DataService.CreateUser(user);
-            Main.Instance.LoggedUser = Main.Instance.Game.DataService.GetDeviceUser();
+            Persistent.GameData.LoggedUser = Main.Instance.Game.DataService.GetDeviceUser();
         }
         else
         {
-            Main.Instance.LoggedUser.Name = Name.InputField.text;
-            Main.Instance.LoggedUser.Saying = Saying.InputField.text;
-            Main.Instance.LoggedUser.ProfilePicIndex = _selectedPicIndex;
+            Persistent.GameData.LoggedUser.Name = Name.InputField.text;
+            Persistent.GameData.LoggedUser.Saying = Saying.InputField.text;
+            Persistent.GameData.LoggedUser.ProfilePicIndex = _selectedPicIndex;
 
-            Main.Instance.Game.DataService.UpdateUser(Main.Instance.LoggedUser);
+            Main.Instance.Game.DataService.UpdateUser(Persistent.GameData.LoggedUser);
         }
         Main.Instance.Game.CanvasController.ShowPanel(Panel.MainMenuPanel);
     }
