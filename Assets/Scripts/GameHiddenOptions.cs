@@ -42,6 +42,22 @@ public class GameHiddenOptions : MonoBehaviour
     [Header("Miscs")]
     public CanvasScaler CanvasScaler;
 
+    public static int MAX_BYTE_SIZE = 1024;
+
+    public static byte[] StringToBytes(string str)
+    {
+        byte[] numArray = new byte[str.Length * 2];
+        System.Buffer.BlockCopy((System.Array)str.ToCharArray(), 0, (System.Array)numArray, 0, numArray.Length);
+        return numArray;
+    }
+
+    public static string BytesToString(byte[] bytes)
+    {
+        char[] chArray = new char[bytes.Length / 2];
+        System.Buffer.BlockCopy((System.Array)bytes, 0, (System.Array)chArray, 0, bytes.Length);
+        return new string(chArray);
+    }
+
     internal float GetTime(float normalTime)
     {
         return InstantDebug ? 0f : normalTime;

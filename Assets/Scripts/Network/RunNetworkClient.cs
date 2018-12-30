@@ -12,16 +12,21 @@ public class RunNetworkClient : MonoBehaviour
     public int BroadcastInterval = 1000;
 
     public bool IsRunning;
+    public bool FoundBroadscast;
 
     public delegate void OnListenSuccessCallback(string fromAddress, string data);
     public OnListenSuccessCallback OnListenSuccess;
+
+    public delegate void OnJoinCallback();
+    public delegate void OnJoinFailedCallback();
+
+    public OnJoinCallback OnJoin;
+    public OnJoinFailedCallback OnJoinFailed;
 
     //
 
     private HostTopology _topology;
     private QosType QosType;
-
-    private const int MAX_BYTE_SIZE = 1024;
 
     private string _broadcastData;
     private byte[] _msgOutBuffer;
@@ -29,6 +34,8 @@ public class RunNetworkClient : MonoBehaviour
     private Dictionary<string, NetworkBroadcastResult> _broadcastsReceived;
 
     public int HostId;
+    public int ReliableChannel;
+
     private byte error;
 
     private void OnEnable()
@@ -61,7 +68,7 @@ public class RunNetworkClient : MonoBehaviour
         //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ConnectionConfig defaultConfig = new ConnectionConfig();
         QosType = QosType.Reliable;
-        int num = (int)defaultConfig.AddChannel(QosType);
+        ReliableChannel = (int)defaultConfig.AddChannel(QosType);
         _topology = new HostTopology(defaultConfig, 4);
 
         DebugPanel.Phone.Log("4. Created default configuration (HostTopology).");
@@ -78,7 +85,7 @@ public class RunNetworkClient : MonoBehaviour
         //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         DebugPanel.Phone.Log("5. Starting Client Listening");
         //_msgOutBuffer = StringToBytes(_broadcastData);
-        _msgInBuffer = new byte[MAX_BYTE_SIZE];
+        _msgInBuffer = new byte[GameHiddenOptions.MAX_BYTE_SIZE];
         _broadcastsReceived = new Dictionary<string, NetworkBroadcastResult>();
 
         NetworkTransport.SetBroadcastCredentials(
@@ -99,49 +106,55 @@ public class RunNetworkClient : MonoBehaviour
     {
         if (IsRunning == false) return;
 
-        int connectionId;
-        int channelId;
-        int receivedSize;
+        RecieveClient();
+    }
 
-        NetworkEventType networkEventType = NetworkTransport.ReceiveFromHost(HostId, out connectionId, out channelId, _msgInBuffer, MAX_BYTE_SIZE, out receivedSize, out error);
+    public void RecieveClient()
+    {
+        byte[] recBuffer = new byte[GameHiddenOptions.MAX_BYTE_SIZE];
+        int dataSize;
+
+        NetworkEventType networkEventType = NetworkTransport.Receive(
+            //out recHostId,
+            //out connectionId,
+            //out channelId,
+            out HostId, out Main.Instance.ConnectionId, out ReliableChannel,
+            recBuffer,
+            GameHiddenOptions.MAX_BYTE_SIZE,
+            out dataSize,
+            out error
+            );
 
         switch (networkEventType)
         {
             case NetworkEventType.Nothing:
                 break;
             case NetworkEventType.DataEvent:
-                DebugPanel.Phone.Log("a data event ?");
+                DebugPanel.Phone.Log("SERVER recieved some data: recBuffer[0] = " + recBuffer);
                 break;
             case NetworkEventType.ConnectEvent:
-                DebugPanel.Phone.Log(string.Format(@"
-                    User {0} has connected!
-                    ",
-                    connectionId
-                    ));
+                OnJoin();
                 break;
             case NetworkEventType.DisconnectEvent:
-                DebugPanel.Phone.Log(string.Format(@"
-                    User {0} has left :( !
-                    ",
-                    connectionId
-                    ));
+                //OnDisconnectedFromServer();
                 break;
             case NetworkEventType.BroadcastEvent:
-                NetworkTransport.GetBroadcastConnectionMessage(HostId, _msgInBuffer, MAX_BYTE_SIZE, out receivedSize, out error);
+
+                if (FoundBroadscast) return;
+
+                NetworkTransport.GetBroadcastConnectionMessage(HostId, _msgInBuffer, GameHiddenOptions.MAX_BYTE_SIZE, out dataSize, out error);
                 string address;
                 int port;
                 NetworkTransport.GetBroadcastConnectionInfo(HostId, out address, out port, out error);
                 NetworkBroadcastResult networkBroadcastResult = new NetworkBroadcastResult();
                 networkBroadcastResult.serverAddress = address;
-                networkBroadcastResult.broadcastData = new byte[receivedSize];
-                System.Buffer.BlockCopy((System.Array)_msgInBuffer, 0, (System.Array)networkBroadcastResult.broadcastData, 0, receivedSize);
+                networkBroadcastResult.broadcastData = new byte[dataSize];
+                System.Buffer.BlockCopy((System.Array)_msgInBuffer, 0, (System.Array)networkBroadcastResult.broadcastData, 0, dataSize);
                 _broadcastsReceived[address] = networkBroadcastResult;
 
-                OnListenSuccess(address, BytesToString(_msgInBuffer));
+                OnListenSuccess(address, GameHiddenOptions.BytesToString(_msgInBuffer));
 
-                IsRunning = false;
-
-                DebugPanel.Phone.Log("Found SOMETHING! address: " + address + ", BytesToString(_msgInBuffer): " + BytesToString(_msgInBuffer));
+                DebugPanel.Phone.Log("Found SOMETHING! address: " + address + ", BytesToString(_msgInBuffer): " + GameHiddenOptions.BytesToString(_msgInBuffer));
 
                 break;
             default:
@@ -153,19 +166,20 @@ public class RunNetworkClient : MonoBehaviour
     {
         NetworkTransport.RemoveHost(HostId);
         IsRunning = false;
+
+        DebugPanel.Phone.Log("Stop Listening HostId: " + HostId);
     }
 
-    private static byte[] StringToBytes(string str)
+    internal void SendToServer()
     {
-        byte[] numArray = new byte[str.Length * 2];
-        System.Buffer.BlockCopy((System.Array)str.ToCharArray(), 0, (System.Array)numArray, 0, numArray.Length);
-        return numArray;
-    }
+        // this is where we hold our data.
+        byte[] buffer = new byte[GameHiddenOptions.MAX_BYTE_SIZE];
 
-    private static string BytesToString(byte[] bytes)
-    {
-        char[] chArray = new char[bytes.Length / 2];
-        System.Buffer.BlockCopy((System.Array)bytes, 0, (System.Array)chArray, 0, bytes.Length);
-        return new string(chArray);
+        // this is where we will crush our data into a byte array
+        buffer[0] = 255;
+
+        NetworkTransport.Send(HostId, Main.Instance.ConnectionId, ReliableChannel, buffer, GameHiddenOptions.MAX_BYTE_SIZE, out error);
+
+        DebugPanel.Phone.Log("Try Sent message... error: " + (NetworkError)error);
     }
 }

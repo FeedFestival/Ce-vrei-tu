@@ -12,13 +12,18 @@ public class Main : MonoBehaviour
         get { return _main; }
     }
 
+    [HideInInspector]
     public User LoggedUser;
+    [HideInInspector]
     public List<Sprite> AvatarSprites;
-    public List<User> ServerUsers;
 
     [Header("Game Debug Options")]
     public bool DebugScript;
     public bool SaveMemory;
+
+    [Header("Network Properties")]
+    public int ConnectionId;
+    public List<User> ServerUsers;
 
     [HideInInspector]
     public Game Game;

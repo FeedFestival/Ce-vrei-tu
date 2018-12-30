@@ -91,7 +91,11 @@ public class MainMenuController : MonoBehaviour
 
                 ConnectionStatusText.color = GameHiddenOptions.Instance.WhiteColor;
                 ConnectionStatusText.text = "CONNECTING...";
-                RunNetworkManager.JoinGame(RunNetworkClient.HostId, _ipAddress, RunNetworkClient.BroadcastPort, OnJoin, OnJoinFailed);
+
+                RunNetworkClient.FoundBroadscast = true;
+                RunNetworkClient.OnJoin = OnJoin;
+                RunNetworkClient.OnJoinFailed = OnJoinFailed;
+                RunNetworkManager.JoinGame(RunNetworkClient.HostId, _ipAddress, RunNetworkClient.BroadcastPort);
 
                 break;
             case ActionButtonFunction.CreateCancel:
@@ -116,6 +120,8 @@ public class MainMenuController : MonoBehaviour
         ConnectionStatusText.color = GameHiddenOptions.Instance.LightBlueColor;
         ConnectionStatusText.text = "SUCCESS";
 
+        RunNetworkClient.SendToServer();
+
         ChangeActionButton(ActionButtonFunction.GoToLobby);
     }
 
@@ -123,6 +129,8 @@ public class MainMenuController : MonoBehaviour
     {
         ConnectionStatusText.color = GameHiddenOptions.Instance.RedColor;
         ConnectionStatusText.text = "FAILED";
+
+        RunNetworkClient.FoundBroadscast = false;
 
         ChangeActionButton(ActionButtonFunction.GiveUp);
     }

@@ -1,60 +1,27 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
 public class RunNetworkManager : NetworkManager
 {
-    public int ConnectionId;
-
     private int hostId;
     private string networkAddress;
     private int networkPort;
     private byte error;
 
-    public delegate void OnJoinCallback();
-    public delegate void OnJoinFailedCallback();
-
-    NetworkClient networkClient;
-
-    OnJoinCallback OnJoin;
-    OnJoinFailedCallback OnJoinFailed;
-
-    public void JoinGame(int host, string ipAddress, int port, OnJoinCallback onJoin, OnJoinFailedCallback onJoinFailed)
+    public void JoinGame(int host, string ipAddress, int port)
     {
         hostId = host;
         networkAddress = ipAddress;
         networkPort = port;
 
-        OnJoin = onJoin;
-        OnJoinFailed = onJoinFailed;
+        DebugPanel.Phone.Log("AttemptConnect: " + hostId + ", " + networkAddress + ", " + networkPort + "... error: " + ((NetworkError)error).ToString());
 
-        StartCoroutine(JoiningGame());
+        Main.Instance.ConnectionId = NetworkTransport.Connect(hostId, networkAddress, networkPort, 0, out error);
     }
-
-    IEnumerator JoiningGame()
-    {
-        singleton.networkAddress = networkAddress;
-        singleton.networkPort = networkPort;
-
-        //networkClient = singleton.StartClient();
-        
-        //networkClient.RegisterHandler(MsgType.Connect, OnConnect);
-        //networkClient.RegisterHandler(MsgType.Error, OnError);
-        //networkClient.RegisterHandler(MsgType.Disconnect, OnDisconnect);
-
-        DebugPanel.Phone.Log("AttemptConnect: " + hostId + ", " + networkAddress + ", " + networkPort);
-
-        ConnectionId = NetworkTransport.Connect(hostId, networkAddress, networkPort, 0, out error);
-
-        yield return new WaitForSeconds(1f);
-
-        DebugPanel.Phone.Log(@"Connected: ConnectionId: " + ConnectionId +
-            ", error: " + error
-            );
-        OnJoin();
-    }
-
+    
     IEnumerator IfConnectedSendMessage()
     {
         yield return new WaitForSeconds(1f);
@@ -65,7 +32,6 @@ public class RunNetworkManager : NetworkManager
         var msg = new RegisterHostMessage();
         msg.gameName = "s";
         msg.comment = "test";
-        networkClient.Send(s, msg);
     }
 
     public void OnCRCCheck(NetworkMessage msg)
@@ -80,14 +46,12 @@ public class RunNetworkManager : NetworkManager
 
     private void OnError(NetworkMessage netMsg)
     {
-        OnJoinFailed();
         UnityEngine.Networking.NetworkSystem.ErrorMessage error = netMsg.ReadMessage<UnityEngine.Networking.NetworkSystem.ErrorMessage>();
         DebugPanel.Phone.Log("Error while connecting: " + error.errorCode);
     }
 
     private void OnDisconnect(NetworkMessage netMsg)
     {
-        OnJoinFailed();
         UnityEngine.Networking.NetworkSystem.ErrorMessage error = netMsg.ReadMessage<UnityEngine.Networking.NetworkSystem.ErrorMessage>();
         DebugPanel.Phone.Log("Disconnected: " + error.errorCode);
     }
@@ -95,7 +59,7 @@ public class RunNetworkManager : NetworkManager
     //Detect when a client connects to the Server
     public override void OnClientConnect(NetworkConnection connection)
     {
-        OnJoin();
+        
     }
 
     //Detect when a client connects to the Server
@@ -106,14 +70,12 @@ public class RunNetworkManager : NetworkManager
 
     public override void OnClientError(NetworkConnection connection, int errorCode)
     {
-        OnJoinFailed();
         DebugPanel.Phone.Log("Not Connected: " + connection.connectionId + ", errorCode: " + errorCode);
     }
 
     //Detect when a client connects to the Server
     public override void OnClientDisconnect(NetworkConnection connection)
     {
-        OnJoinFailed();
         DebugPanel.Phone.Log("Not Connected: " + connection.connectionId);
     }
 }

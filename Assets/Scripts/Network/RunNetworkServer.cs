@@ -24,8 +24,6 @@ public class RunNetworkServer : MonoBehaviour
     private HostTopology _topology;
     private QosType QosType;
 
-    private const int MAX_BYTE_SIZE = 1024;
-
     private string _broadcastData;
     private byte[] _msgOutBuffer;
     //private byte[] _msgInBuffer;
@@ -80,8 +78,8 @@ public class RunNetworkServer : MonoBehaviour
 
         //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         DebugPanel.Phone.Log("5. Starting Broadcast");
-        _msgOutBuffer = StringToBytes(_broadcastData);
-        //_msgInBuffer = new byte[MAX_BYTE_SIZE];
+        _msgOutBuffer = GameHiddenOptions.StringToBytes(_broadcastData);
+        //_msgInBuffer = new byte[GameHiddenOptions.MAX_BYTE_SIZE];
         _broadcastsReceived = new Dictionary<string, NetworkBroadcastResult>();
 
         bool isBroadcasting = NetworkTransport.StartBroadcastDiscovery(
@@ -115,7 +113,7 @@ public class RunNetworkServer : MonoBehaviour
         int connectionId;
         int channelId;
 
-        byte[] recBuffer = new byte[MAX_BYTE_SIZE];
+        byte[] recBuffer = new byte[GameHiddenOptions.MAX_BYTE_SIZE];
         int dataSize;
 
         NetworkEventType networkEventType = NetworkTransport.Receive(
@@ -123,7 +121,7 @@ public class RunNetworkServer : MonoBehaviour
             out connectionId,
             out channelId,
             recBuffer,
-            MAX_BYTE_SIZE,
+            GameHiddenOptions.MAX_BYTE_SIZE,
             out dataSize,
             out error
             );
@@ -133,8 +131,10 @@ public class RunNetworkServer : MonoBehaviour
             case NetworkEventType.Nothing:
                 break;
             case NetworkEventType.DataEvent:
-                DebugPanel.Phone.Log("a data event ?");
-                //OnMessageRecieved();
+
+                
+
+                DebugPanel.Phone.Log("SERVER recieved some data: recBuffer[0] = " + recBuffer);
                 break;
             case NetworkEventType.ConnectEvent:
                 DebugPanel.Phone.Log(string.Format(@"
@@ -165,12 +165,5 @@ public class RunNetworkServer : MonoBehaviour
     {
         NetworkTransport.StopBroadcastDiscovery();
         NetworkTransport.RemoveHost(_hostId);
-    }
-
-    private static byte[] StringToBytes(string str)
-    {
-        byte[] numArray = new byte[str.Length * 2];
-        System.Buffer.BlockCopy((System.Array)str.ToCharArray(), 0, (System.Array)numArray, 0, numArray.Length);
-        return numArray;
     }
 }
