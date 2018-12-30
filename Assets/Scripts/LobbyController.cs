@@ -65,19 +65,21 @@ public class LobbyController : MonoBehaviour
 
     }
 
-    public void UpdateClientList(List<User> newUsers, List<User> disconectedUsers)
+    public void UpdateClientList(List<User> newUsers)
     {
         UpdateView(newUsers);
     }
 
-    public void UpdateServerList(List<User> newUsers, List<User> disconectedUsers)
+    public void UpdateServerList(User newUser, int? disconectedConnectionId = null)
     {
         if (Main.Instance.ServerUsers == null)
             Main.Instance.ServerUsers = new List<User>();
 
-        if (newUsers != null)
+        if (Main.Instance.ServerUsers.Count == 0)
+            Main.Instance.ServerUsers.Add(Main.Instance.LoggedUser);
+
+        if (newUser != null)
         {
-            var newUser = newUsers[0];
             foreach (var user in Main.Instance.ServerUsers)
             {
                 if (newUser.ConnectionId == user.ConnectionId)
@@ -90,21 +92,16 @@ public class LobbyController : MonoBehaviour
                 Main.Instance.ServerUsers.Add(newUser);
         }
 
-        if (disconectedUsers != null)
+        if (disconectedConnectionId != null && Main.Instance.ServerUsers.Count > 0)
         {
             int index = 0;
-            var disconectedUser = disconectedUsers[0];
             foreach (var user in Main.Instance.ServerUsers)
             {
-                if (disconectedUser.ConnectionId == user.ConnectionId)
-                {
-                    disconectedUser.AllreadyIn = true;
+                if (disconectedConnectionId == user.ConnectionId)
                     break;
-                }
                 index++;
             }
-            if (disconectedUser.AllreadyIn == true)
-                Main.Instance.ServerUsers.RemoveAt(index);
+            Main.Instance.ServerUsers.RemoveAt(index);
         }
 
         UpdateView(Main.Instance.ServerUsers);
@@ -112,6 +109,8 @@ public class LobbyController : MonoBehaviour
 
     private void UpdateView(List<User> users)
     {
+        if (users == null || users.Count == 0) return;
+
         if (_lobbyUsers == null)
             _lobbyUsers = new List<LobbyUser>();
 

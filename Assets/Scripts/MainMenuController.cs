@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -93,8 +94,10 @@ public class MainMenuController : MonoBehaviour
                 ConnectionStatusText.text = "CONNECTING...";
 
                 RunNetworkClient.FoundBroadscast = true;
-                RunNetworkClient.OnJoin = OnJoin;
-                RunNetworkClient.OnJoinFailed = OnJoinFailed;
+                RunNetworkClient.OnJoin = OnClientJoin;
+                RunNetworkClient.OnJoinFailed = OnClientJoinFailed;
+                RunNetworkClient.OnRecievedServerInfo = OnRecievedServerInfo;
+
                 RunNetworkManager.JoinGame(RunNetworkClient.HostId, _ipAddress, RunNetworkClient.BroadcastPort);
 
                 break;
@@ -115,17 +118,22 @@ public class MainMenuController : MonoBehaviour
         }
     }
 
-    private void OnJoin()
+    private void OnClientJoin()
     {
         ConnectionStatusText.color = GameHiddenOptions.Instance.LightBlueColor;
         ConnectionStatusText.text = "SUCCESS";
 
-        RunNetworkClient.SendToServer();
+        NetClientUser msg = new NetClientUser()
+        {
+            Name = Main.Instance.LoggedUser.Name,
+            Pic = Main.Instance.LoggedUser.ProfilePicIndex
+        };
+        RunNetworkClient.SendToServer(msg);
 
         ChangeActionButton(ActionButtonFunction.GoToLobby);
     }
 
-    private void OnJoinFailed()
+    private void OnClientJoinFailed()
     {
         ConnectionStatusText.color = GameHiddenOptions.Instance.RedColor;
         ConnectionStatusText.text = "FAILED";
@@ -134,13 +142,18 @@ public class MainMenuController : MonoBehaviour
 
         ChangeActionButton(ActionButtonFunction.GiveUp);
     }
-    
+
+    private void OnRecievedServerInfo(int fromConnectionId, int fromChannelId, int fromHostId, List<User> users)
+    {
+        Main.Instance.Game.CanvasController.LobbyController.UpdateClientList(users);
+    }
+
     private int _numberOfConnections;
 
     public void OnCreateButtonClicked()
     {
         ChangeActionButton(ActionButtonFunction.CreateCancel);
-        
+
         RoomName.text = "Creating game...";
         ConnectionStatusText.color = GameHiddenOptions.Instance.WhiteColor;
         ConnectionStatusText.text = "BROADCASTING";
@@ -149,6 +162,8 @@ public class MainMenuController : MonoBehaviour
             RunNetworkServer.StartAsServer();
         else
             RunNetworkServer.gameObject.SetActive(true);
+
+        // delegates
         RunNetworkServer.OnConnectedToServer = () =>
         {
             _numberOfConnections++;
@@ -158,16 +173,47 @@ public class MainMenuController : MonoBehaviour
 
             ShowGoToLobbyButton();
         };
-
-        RunNetworkServer.OnDisconnectedFromServer = () =>
+        RunNetworkServer.OnDisconnectedFromServer = (fromConnectionId) =>
         {
             _numberOfConnections--;
             RoomName.text = "Game Created";
             ConnectionStatusText.color = GameHiddenOptions.Instance.LightBlueColor;
             ConnectionStatusText.text = _numberOfConnections.ToString();
 
+            Main.Instance.Game.CanvasController.LobbyController.UpdateServerList(null, fromConnectionId);
+
+            CreateAndSendUserListDataForLobbyClients();
+
             ShowGoToLobbyButton();
         };
+        RunNetworkServer.OnRecievedClientInfo = (int fromConnectionId, int fromChannelId, int fromHostId, User user) =>
+        {
+            DebugPanel.Phone.Log(" Someone is in lobby - " + user.ToString());
+
+            Main.Instance.Game.CanvasController.LobbyController.UpdateServerList(user);
+
+            CreateAndSendUserListDataForLobbyClients();
+        };
+    }
+
+    private void CreateAndSendUserListDataForLobbyClients()
+    {
+        if (Main.Instance.ServerUsers == null && Main.Instance.ServerUsers.Count == 0)
+            return;
+
+        var users = new List<NetClientUser>();
+        foreach (var user in Main.Instance.ServerUsers)
+        {
+            users.Add(new NetClientUser()
+            {
+                Name = user.Name,
+                Pic = user.ProfilePicIndex,
+                ConnId = user.ConnectionId
+            });
+        }
+        var netServerUsers = new NetServerUsers() { Users = users };
+        var connectedUsersIds = Main.Instance.ServerUsers.Select(u => u.ConnectionId).ToArray();
+        RunNetworkServer.SendToClients(netServerUsers, connectedUsersIds);
     }
 
     private void ShowGoToLobbyButton()

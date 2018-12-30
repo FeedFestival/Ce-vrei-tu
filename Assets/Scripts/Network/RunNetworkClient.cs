@@ -1,5 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -23,6 +25,8 @@ public class RunNetworkClient : MonoBehaviour
     public OnJoinCallback OnJoin;
     public OnJoinFailedCallback OnJoinFailed;
 
+    public delegate void OnRecievedServerInfoCallback(int fromConnectionId, int fromChannelId, int fromHostId, List<User> users);
+    public OnRecievedServerInfoCallback OnRecievedServerInfo;
     //
 
     private HostTopology _topology;
@@ -111,14 +115,18 @@ public class RunNetworkClient : MonoBehaviour
 
     public void RecieveClient()
     {
+        int fromHostId;
+        int fromConnectionId;
+        int fromChannelId;
+
         byte[] recBuffer = new byte[GameHiddenOptions.MAX_BYTE_SIZE];
         int dataSize;
 
         NetworkEventType networkEventType = NetworkTransport.Receive(
-            //out recHostId,
-            //out connectionId,
-            //out channelId,
-            out HostId, out Main.Instance.ConnectionId, out ReliableChannel,
+            out fromHostId,
+            out fromConnectionId,
+            out fromChannelId,
+            //out HostId, out Main.Instance.ConnectionId, out ReliableChannel,
             recBuffer,
             GameHiddenOptions.MAX_BYTE_SIZE,
             out dataSize,
@@ -130,7 +138,12 @@ public class RunNetworkClient : MonoBehaviour
             case NetworkEventType.Nothing:
                 break;
             case NetworkEventType.DataEvent:
-                DebugPanel.Phone.Log("SERVER recieved some data: recBuffer[0] = " + recBuffer);
+
+                BinaryFormatter formatter = new BinaryFormatter();
+                MemoryStream ms = new MemoryStream(recBuffer);
+                NetMsg msg = (NetMsg)formatter.Deserialize(ms);
+
+                OnData(fromHostId, fromConnectionId, fromChannelId, msg);
                 break;
             case NetworkEventType.ConnectEvent:
                 OnJoin();
@@ -142,10 +155,10 @@ public class RunNetworkClient : MonoBehaviour
 
                 if (FoundBroadscast) return;
 
-                NetworkTransport.GetBroadcastConnectionMessage(HostId, _msgInBuffer, GameHiddenOptions.MAX_BYTE_SIZE, out dataSize, out error);
+                NetworkTransport.GetBroadcastConnectionMessage(fromHostId, _msgInBuffer, GameHiddenOptions.MAX_BYTE_SIZE, out dataSize, out error);
                 string address;
                 int port;
-                NetworkTransport.GetBroadcastConnectionInfo(HostId, out address, out port, out error);
+                NetworkTransport.GetBroadcastConnectionInfo(fromHostId, out address, out port, out error);
                 NetworkBroadcastResult networkBroadcastResult = new NetworkBroadcastResult();
                 networkBroadcastResult.serverAddress = address;
                 networkBroadcastResult.broadcastData = new byte[dataSize];
@@ -162,6 +175,36 @@ public class RunNetworkClient : MonoBehaviour
         }
     }
 
+    private void OnData(int fromConnectionId, int fromChannelId, int fromHostId, NetMsg msg)
+    {
+        switch ((Operation)msg.OP)
+        {
+            case Operation.None:
+                break;
+            case Operation.ClientHandshake:
+
+                break;
+            case Operation.ServerHandshake:
+
+                var cast = (NetServerUsers)msg;
+                var users = new List<User>();
+                foreach (var usr in cast.Users)
+                {
+                    users.Add(
+                        new User()
+                        {
+                            Name = usr.Name,
+                            ProfilePicIndex = usr.Pic,
+                            ConnectionId = usr.ConnId
+                        });
+                }
+                OnRecievedServerInfo(fromConnectionId, fromChannelId, fromHostId, users);
+                break;
+            default:
+                break;
+        }
+    }
+
     public void StopListening()
     {
         NetworkTransport.RemoveHost(HostId);
@@ -170,16 +213,19 @@ public class RunNetworkClient : MonoBehaviour
         DebugPanel.Phone.Log("Stop Listening HostId: " + HostId);
     }
 
-    internal void SendToServer()
+    internal void SendToServer(NetMsg msg)
     {
         // this is where we hold our data.
         byte[] buffer = new byte[GameHiddenOptions.MAX_BYTE_SIZE];
 
         // this is where we will crush our data into a byte array
-        buffer[0] = 255;
+
+        BinaryFormatter formatter = new BinaryFormatter();
+        MemoryStream ms = new MemoryStream(buffer);
+        formatter.Serialize(ms, msg);
+
 
         NetworkTransport.Send(HostId, Main.Instance.ConnectionId, ReliableChannel, buffer, GameHiddenOptions.MAX_BYTE_SIZE, out error);
-
         DebugPanel.Phone.Log("Try Sent message... error: " + (NetworkError)error);
     }
 }

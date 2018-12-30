@@ -1,5 +1,8 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -15,10 +18,14 @@ public class RunNetworkServer : MonoBehaviour
 
     public delegate void OnConnectedToServerCallback();
     public OnConnectedToServerCallback OnConnectedToServer;
-    public delegate void OnDisconnectedFromServerCallback();
+    public delegate void OnDisconnectedFromServerCallback(int fromConnectionId);
     public OnDisconnectedFromServerCallback OnDisconnectedFromServer;
     public delegate void OnMessageRecievedCallback();
     public OnMessageRecievedCallback OnMessageRecieved;
+
+    public delegate void OnRecievedClientInfoCallback(int fromConnectionId, int fromChannelId, int fromHostId, User user);
+    public OnRecievedClientInfoCallback OnRecievedClientInfo;
+
     //
 
     private HostTopology _topology;
@@ -30,6 +37,7 @@ public class RunNetworkServer : MonoBehaviour
     private Dictionary<string, NetworkBroadcastResult> _broadcastsReceived;
 
     private int _hostId;
+    private int ReliableChannel;
     private byte error;
 
     private void OnEnable()
@@ -62,7 +70,7 @@ public class RunNetworkServer : MonoBehaviour
         //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         ConnectionConfig defaultConfig = new ConnectionConfig();
         QosType = QosType.Reliable;
-        int num = (int)defaultConfig.AddChannel(QosType);
+        ReliableChannel = (int)defaultConfig.AddChannel(QosType);
         _topology = new HostTopology(defaultConfig, 4);
 
         DebugPanel.Phone.Log("4. Created default configuration (HostTopology).");
@@ -109,17 +117,17 @@ public class RunNetworkServer : MonoBehaviour
     {
         if (IsRunning == false) return;
 
-        int recHostId;
-        int connectionId;
-        int channelId;
+        int fromHostId;
+        int fromConnectionId;
+        int fromChannelId;
 
         byte[] recBuffer = new byte[GameHiddenOptions.MAX_BYTE_SIZE];
         int dataSize;
 
         NetworkEventType networkEventType = NetworkTransport.Receive(
-            out recHostId,
-            out connectionId,
-            out channelId,
+            out fromHostId,
+            out fromConnectionId,
+            out fromChannelId,
             recBuffer,
             GameHiddenOptions.MAX_BYTE_SIZE,
             out dataSize,
@@ -132,25 +140,18 @@ public class RunNetworkServer : MonoBehaviour
                 break;
             case NetworkEventType.DataEvent:
 
-                
+                BinaryFormatter formatter = new BinaryFormatter();
+                MemoryStream ms = new MemoryStream(recBuffer);
+                NetMsg msg = (NetMsg)formatter.Deserialize(ms);
 
-                DebugPanel.Phone.Log("SERVER recieved some data: recBuffer[0] = " + recBuffer);
+                OnData(fromConnectionId, fromChannelId, fromHostId, msg);
+
                 break;
             case NetworkEventType.ConnectEvent:
-                DebugPanel.Phone.Log(string.Format(@"
-                    User {0} has connected!
-                    ",
-                    connectionId
-                    ));
                 OnConnectedToServer();
                 break;
             case NetworkEventType.DisconnectEvent:
-                DebugPanel.Phone.Log(string.Format(@"
-                    User {0} has left :( !
-                    ",
-                    connectionId
-                    ));
-                OnDisconnectedFromServer();
+                OnDisconnectedFromServer(fromConnectionId);
                 break;
             case NetworkEventType.BroadcastEvent:
                 DebugPanel.Phone.Log("a broadcast event ?");
@@ -158,6 +159,52 @@ public class RunNetworkServer : MonoBehaviour
                 break;
             default:
                 break;
+        }
+    }
+
+    private void OnData(int fromConnectionId, int fromChannelId, int fromHostId, NetMsg msg)
+    {
+        switch ((Operation)msg.OP)
+        {
+            case Operation.None:
+                break;
+            case Operation.ClientHandshake:
+
+                var cast = (NetClientUser)msg;
+                var user = new User()
+                {
+                    Name = cast.Name,
+                    ProfilePicIndex = cast.Pic,
+                    ConnectionId = fromConnectionId
+                };
+                OnRecievedClientInfo(fromConnectionId, fromChannelId, fromHostId, user);
+
+                break;
+            case Operation.ServerHandshake:
+                break;
+            default:
+                break;
+        }
+    }
+
+    internal void SendToClients(NetMsg msg, int[] connIds)
+    {
+        // this is where we hold our data.
+        byte[] buffer = new byte[GameHiddenOptions.MAX_BYTE_SIZE];
+
+        // this is where we will crush our data into a byte array
+
+        BinaryFormatter formatter = new BinaryFormatter();
+        MemoryStream ms = new MemoryStream(buffer);
+        formatter.Serialize(ms, msg);
+
+        foreach (var connId in connIds)
+        {
+            if (connId == Main.Instance.ConnectionId)
+                continue;
+
+            NetworkTransport.Send(_hostId, connId, ReliableChannel, buffer, GameHiddenOptions.MAX_BYTE_SIZE, out error);
+            DebugPanel.Phone.Log("Try Sent message to CLIENTS[" + connId + "]... error: " + (NetworkError)error);
         }
     }
 
