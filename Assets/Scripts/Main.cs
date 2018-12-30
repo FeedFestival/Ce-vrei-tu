@@ -14,6 +14,7 @@ public class Main : MonoBehaviour
 
     public User LoggedUser;
     public List<Sprite> AvatarSprites;
+    public List<User> ServerUsers;
 
     [Header("Game Debug Options")]
     public bool DebugScript;

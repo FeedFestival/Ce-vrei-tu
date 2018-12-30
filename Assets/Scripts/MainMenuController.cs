@@ -64,7 +64,10 @@ public class MainMenuController : MonoBehaviour
                 ConnectionStatusText.color = GameHiddenOptions.Instance.WhiteColor;
                 ConnectionStatusText.text = "";
 
-                RunNetworkClient.gameObject.SetActive(true);
+                if (RunNetworkClient.gameObject.activeSelf)
+                    RunNetworkClient.StartAsClient();
+                else
+                    RunNetworkClient.gameObject.SetActive(true);
                 RunNetworkClient.OnListenSuccess = (string fromAddress, string data) =>
                 {
                     RoomName.text = _ipAddress = fromAddress;
@@ -101,7 +104,7 @@ public class MainMenuController : MonoBehaviour
                 break;
             case ActionButtonFunction.GoToLobby:
 
-
+                Main.Instance.Game.CanvasController.LobbyController.ShowLobby();
                 break;
             default:
                 break;
@@ -134,7 +137,10 @@ public class MainMenuController : MonoBehaviour
         ConnectionStatusText.color = GameHiddenOptions.Instance.WhiteColor;
         ConnectionStatusText.text = "BROADCASTING";
 
-        RunNetworkServer.gameObject.SetActive(true);
+        if (RunNetworkServer.gameObject.activeSelf)
+            RunNetworkServer.StartAsServer();
+        else
+            RunNetworkServer.gameObject.SetActive(true);
         RunNetworkServer.OnConnectedToServer = () =>
         {
             _numberOfConnections++;

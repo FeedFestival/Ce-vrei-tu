@@ -20,6 +20,10 @@ public class User
     public bool IsUsingSound { get; set; }
     public int PrankCoins { get; set; }
 
+    // Game
+    public int ConnectionId;
+    public bool AllreadyIn;
+
     public override string ToString()
     {
         return string.Format(@"[User: 

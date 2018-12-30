@@ -8,6 +8,7 @@ public class CanvasController : MonoBehaviour
     public StartPanelController StartPanelController;
     public AuthController AuthController;
     public MainMenuController MainMenuController;
+    public LobbyController LobbyController;
 
     public Panel CurrentPanel;
     public Panel PreviousPanel;
@@ -22,6 +23,8 @@ public class CanvasController : MonoBehaviour
 
     internal void LoadDependencies()
     {
+        Main.Instance.Game.CanvasController.LobbyController.Init();
+
         HidePanel(Panel.All);
     }
 

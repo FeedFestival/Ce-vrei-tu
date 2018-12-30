@@ -67,11 +67,11 @@ public class DebugPanel : MonoBehaviour
 
         _rt = GetComponent<RectTransform>();
 
-        var actualHeight = gameObject.transform.parent.GetComponent<RectTransform>().sizeDelta.y;
-        var actualWidth = gameObject.transform.parent.GetComponent<RectTransform>().sizeDelta.x;
+        //var actualHeight = gameObject.transform.parent.GetComponent<RectTransform>().sizeDelta.y;
+        //var actualWidth = gameObject.transform.parent.GetComponent<RectTransform>().sizeDelta.x;
 
-        _screenHeight = gameObject.transform.parent.GetComponent<CanvasScaler>().referenceResolution.y;
-        var screenWidth = gameObject.transform.parent.GetComponent<CanvasScaler>().referenceResolution.x;
+        _screenHeight = GameHiddenOptions.Instance.CanvasScaler.referenceResolution.y;
+        var screenWidth = GameHiddenOptions.Instance.CanvasScaler.referenceResolution.x;
 
         //Debug.Log(" actualWidth: " + actualWidth + ", actualHeight: " + actualHeight + ", _screenHeight: " + _screenHeight + ", screenWidth: " + screenWidth);
 

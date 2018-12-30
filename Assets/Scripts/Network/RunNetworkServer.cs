@@ -36,6 +36,7 @@ public class RunNetworkServer : MonoBehaviour
 
     private void OnEnable()
     {
+        InitServer();
         StartAsServer();
     }
 
@@ -69,11 +70,8 @@ public class RunNetworkServer : MonoBehaviour
         DebugPanel.Phone.Log("4. Created default configuration (HostTopology).");
     }
 
-    private void StartAsServer()
+    public void StartAsServer()
     {
-        InitServer();
-
-        //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
         _hostId = NetworkTransport.AddHost(_topology, BroadcastPort);
         DebugPanel.Phone.Log("4. Added host: " + _hostId);
 

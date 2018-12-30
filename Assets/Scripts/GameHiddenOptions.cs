@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameHiddenOptions : MonoBehaviour
 {
@@ -36,6 +37,10 @@ public class GameHiddenOptions : MonoBehaviour
     [Header("Prefabs")]
     public GameObject AvatarElementPrefab;
     public GameObject DebugInfoPrefab;
+    public GameObject LobbyUserPrefab;
+
+    [Header("Miscs")]
+    public CanvasScaler CanvasScaler;
 
     internal float GetTime(float normalTime)
     {
