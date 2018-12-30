@@ -84,11 +84,11 @@ public class StartPanelController : MonoBehaviour
         {
             if (Persistent.GameData.LoggedUser == null)
             {
-                Main.Instance.Game.CanvasController.ShowPanel(Panel.AuthPanel);
+                Main.Instance.GameMenu.CanvasController.ShowPanel(Panel.AuthPanel);
             }
             else
             {
-                Main.Instance.Game.CanvasController.ShowPanel(Panel.MainMenuPanel);
+                Main.Instance.GameMenu.CanvasController.ShowPanel(Panel.MainMenuPanel);
             }
         });
     }

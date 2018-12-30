@@ -17,12 +17,19 @@ public class Main : MonoBehaviour
     public bool SaveMemory;
 
     [HideInInspector]
+    public GameMenu GameMenu;
+
+    [HideInInspector]
     public Game Game;
 
     void Awake()
     {
         _main = GetComponent<Main>();
+
         Game = GetComponent<Game>();
+        if (Game == null) {
+            GameMenu = GetComponent<GameMenu>();
+        }
     }
 
     void Start()
@@ -36,7 +43,10 @@ public class Main : MonoBehaviour
         if (Application.isEditor == false)
             GameHiddenOptions.Instance.InstantDebug = false;
 
-        Game.LoadDependencies();
+        if (Game == null)
+            GameMenu.LoadDependencies();
+        else
+            Game.LoadDependencies();
 
         StartCoroutine(StartGame());
     }
@@ -46,7 +56,10 @@ public class Main : MonoBehaviour
         var time = GameHiddenOptions.Instance.GetTime(GameHiddenOptions.Instance.TimeBeforeGameStart);
         yield return new WaitForSeconds(time);
 
-        Game.StartGame();
+        if (Game == null)
+            GameMenu.StartGameMenu();
+        else
+            Game.StartGame();
     }
 
     public Sprite GetAvatarSprite(int index)

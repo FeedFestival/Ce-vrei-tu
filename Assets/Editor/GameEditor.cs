@@ -5,10 +5,10 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(Game))]
+[CustomEditor(typeof(DomainLogic))]
 public class GameEditor : Editor
 {
-    private Game _myScript { get { return (Game)target; } }
+    private DomainLogic _myScript { get { return (DomainLogic)target; } }
 
     private bool _setupConfirm;
     public enum InspectorButton

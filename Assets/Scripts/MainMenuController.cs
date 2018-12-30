@@ -111,7 +111,7 @@ public class MainMenuController : MonoBehaviour
                 break;
             case ActionButtonFunction.GoToLobby:
 
-                Main.Instance.Game.CanvasController.LobbyController.ShowLobby();
+                Main.Instance.GameMenu.CanvasController.LobbyController.ShowLobby();
                 break;
             default:
                 break;
@@ -145,7 +145,7 @@ public class MainMenuController : MonoBehaviour
 
     private void OnRecievedServerInfo(int fromConnectionId, int fromChannelId, int fromHostId, List<User> users)
     {
-        Main.Instance.Game.CanvasController.LobbyController.UpdateClientList(users);
+        Main.Instance.GameMenu.CanvasController.LobbyController.UpdateClientList(users);
     }
 
     private int _numberOfConnections;
@@ -180,7 +180,7 @@ public class MainMenuController : MonoBehaviour
             ConnectionStatusText.color = GameHiddenOptions.Instance.LightBlueColor;
             ConnectionStatusText.text = _numberOfConnections.ToString();
 
-            Main.Instance.Game.CanvasController.LobbyController.UpdateServerList(null, fromConnectionId);
+            Main.Instance.GameMenu.CanvasController.LobbyController.UpdateServerList(null, fromConnectionId);
 
             CreateAndSendUserListDataForLobbyClients();
 
@@ -190,7 +190,7 @@ public class MainMenuController : MonoBehaviour
         {
             DebugPanel.Phone.Log(" Someone is in lobby - " + user.ToString());
 
-            Main.Instance.Game.CanvasController.LobbyController.UpdateServerList(user);
+            Main.Instance.GameMenu.CanvasController.LobbyController.UpdateServerList(user);
 
             CreateAndSendUserListDataForLobbyClients();
         };
@@ -282,7 +282,7 @@ public class MainMenuController : MonoBehaviour
 
     public void OnSettingsButtonClicked()
     {
-        Main.Instance.Game.CanvasController.ShowPanel(Panel.AuthPanel);
+        Main.Instance.GameMenu.CanvasController.ShowPanel(Panel.AuthPanel);
     }
 
     public void OnCloseButtonClicked()

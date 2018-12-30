@@ -15,6 +15,7 @@ public class GameHiddenOptions : MonoBehaviour
     void Awake()
     {
         _gameHiddenOptions = this;
+        DontDestroyOnLoad(gameObject);
     }
 
     public bool InstantDebug;

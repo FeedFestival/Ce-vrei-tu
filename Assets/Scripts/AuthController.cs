@@ -96,7 +96,7 @@ public class AuthController : MonoBehaviour
 
     public void OnCancelClick()
     {
-        Main.Instance.Game.CanvasController.GoToPreviousPanel(Panel.AuthPanel);
+        Main.Instance.GameMenu.CanvasController.GoToPreviousPanel(Panel.AuthPanel);
     }
 
     public void SaveUser()
@@ -110,8 +110,8 @@ public class AuthController : MonoBehaviour
                 Saying = Saying.InputField.text,
                 ProfilePicIndex = _selectedPicIndex
             };
-            Main.Instance.Game.DataService.CreateUser(user);
-            Persistent.GameData.LoggedUser = Main.Instance.Game.DataService.GetDeviceUser();
+            DomainLogic.DB.DataService.CreateUser(user);
+            Persistent.GameData.LoggedUser = DomainLogic.DB.DataService.GetDeviceUser();
         }
         else
         {
@@ -119,8 +119,8 @@ public class AuthController : MonoBehaviour
             Persistent.GameData.LoggedUser.Saying = Saying.InputField.text;
             Persistent.GameData.LoggedUser.ProfilePicIndex = _selectedPicIndex;
 
-            Main.Instance.Game.DataService.UpdateUser(Persistent.GameData.LoggedUser);
+            DomainLogic.DB.DataService.UpdateUser(Persistent.GameData.LoggedUser);
         }
-        Main.Instance.Game.CanvasController.ShowPanel(Panel.MainMenuPanel);
+        Main.Instance.GameMenu.CanvasController.ShowPanel(Panel.MainMenuPanel);
     }
 }

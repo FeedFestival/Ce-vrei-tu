@@ -5,61 +5,14 @@ using UnityEngine;
 
 public class Game : MonoBehaviour
 {
-    private float _timeSpeed = 1.0f;
 
-    private DataService _dataService;
-    public DataService DataService
-    {
-        get
-        {
-            if (_dataService == null)
-                _dataService = new DataService("Database.db");
-            return _dataService;
-        }
-    }
 
-    public CanvasController CanvasController;
 
-    public void LoadDependencies()
-    {
-        CanvasController.LoadDependencies();
-        LoadingController.Instance.LoadDependencies();
-    }
 
-    public void StartGame()
-    {
-        CanvasController.Init();
-
-        StartCoroutine(CreateSession());
-    }
-
-    #region DataBase Editor Functions
-
-    public void RecreateUserTable()
-    {
-        DataService.RecreateUserTable();
-    }
-
-    public void WriteDefaultData()
-    {
-        DataService.WriteDefaultData();
-    }
-
-    #endregion
-
-    #region UserData
-
-    public IEnumerator CreateSession()
-    {
-        var time = GameHiddenOptions.Instance.GetTime(GameHiddenOptions.Instance.TimeBeforeSessionCreation);
-        yield return new WaitForSeconds(time);
-
-        Persistent.GameData.LoggedUser = DataService.GetDeviceUser();
-    }
-
-    #endregion
 
     #region Global WaitForSeconds, TimeSpeed
+
+    private float _timeSpeed = 1.0f;
 
     /// <summary>
     /// Usefull for debuging
@@ -92,6 +45,16 @@ public class Game : MonoBehaviour
         //    UiController.TimeSpeedText.text = _timeSpeed.ToString();
         //    Time.timeScale = _timeSpeed;
         //}
+    }
+
+    internal void LoadDependencies()
+    {
+        throw new NotImplementedException();
+    }
+
+    internal void StartGame()
+    {
+        throw new NotImplementedException();
     }
 
     #endregion
