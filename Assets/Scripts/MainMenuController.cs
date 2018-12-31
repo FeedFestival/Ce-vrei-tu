@@ -15,7 +15,11 @@ public class MainMenuController : MonoBehaviour
     public Text RoomName;
     public Text ConnectionStatusText;
     public GameObject LookingForRoomsPanel;
+
     public Text InQueueTime;
+    private int _secondsToTimeout;
+    private int _maxSecondsToTimeout = 90;
+    private IEnumerator _queueTimeCountdown;
 
     public Button JoinButton;
     private ColorBlock normalColorBlock;
@@ -59,6 +63,10 @@ public class MainMenuController : MonoBehaviour
                 ConnectionStatusText.color = GameHiddenOptions.Instance.WhiteColor;
                 ConnectionStatusText.text = "";
 
+                StopQueueCountdown();
+                _queueTimeCountdown = QueueTimeCountdown();
+                StartCoroutine(_queueTimeCountdown);
+
                 if (Persistent.GameData.RunNetworkClient.gameObject.activeSelf)
                     Persistent.GameData.RunNetworkClient.StartAsClient();
                 else
@@ -74,14 +82,9 @@ public class MainMenuController : MonoBehaviour
             case ActionButtonFunction.JoinCancel:
             case ActionButtonFunction.GiveUp:
 
-                RoomName.text = "There is no one out there.";
-                LookingForRoomsPanel.SetActive(false);
-                ConnectionStatusText.text = "";
-
-                Persistent.GameData.RunNetworkClient.StopListening();
-
-                ChangeActionButton(ActionButtonFunction.LookForGames);
+                JoinCancel();
                 break;
+
             case ActionButtonFunction.Join:
 
                 ConnectionStatusText.color = GameHiddenOptions.Instance.WhiteColor;
@@ -110,6 +113,48 @@ public class MainMenuController : MonoBehaviour
             default:
                 break;
         }
+    }
+
+    private void JoinCancel()
+    {
+        StopQueueCountdown();
+
+        RoomName.text = "There is no one out there.";
+        LookingForRoomsPanel.SetActive(false);
+        ConnectionStatusText.text = "";
+
+        Persistent.GameData.RunNetworkClient.StopListening();
+
+        ChangeActionButton(ActionButtonFunction.LookForGames);
+    }
+
+    IEnumerator QueueTimeCountdown()
+    {
+        TimeSpan t = TimeSpan.FromSeconds(_secondsToTimeout);
+        string timeString = string.Format("{0:D1}:{1:D2}",
+                        t.Minutes,
+                        t.Seconds);
+        InQueueTime.text = timeString;
+        yield return new WaitForSeconds(1f);
+
+        _secondsToTimeout--;
+        if (_secondsToTimeout >= 0)
+        {
+            _queueTimeCountdown = QueueTimeCountdown();
+            StartCoroutine(_queueTimeCountdown);
+        }
+        else
+        {
+            JoinCancel();
+        }
+    }
+
+    private void StopQueueCountdown()
+    {
+        if (_queueTimeCountdown != null)
+            StopCoroutine(_queueTimeCountdown);
+        _secondsToTimeout = _maxSecondsToTimeout;
+        _queueTimeCountdown = null;
     }
 
     private void OnClientJoin()
