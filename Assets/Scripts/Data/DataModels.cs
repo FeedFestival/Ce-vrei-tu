@@ -30,9 +30,9 @@ public class User
                             Id={0}, 
                             Name={1},
                             IsUsingSound={2}, 
-                            ]", 
-                            Id, 
-                            Name, 
+                            ]",
+                            Id,
+                            Name,
                             IsUsingSound);
     }
 
@@ -51,8 +51,67 @@ public class User
 
 #endregion
 
-#region Articles
-    
+#region Category
+
+public class Category
+{
+    [PrimaryKey, AutoIncrement]
+    public int Id { get; set; }
+    public string Name { get; set; }
+
+    public Category()
+    {
+
+    }
+
+    public Category(string properties)
+    {
+        Id = DataUtils.GetIntDataValue(properties, "ID:");
+        Name = DataUtils.GetDataValue(properties, "Name:");
+    }
+}
+
+#endregion
+
+
+#region Question
+
+public class Question
+{
+    [PrimaryKey, AutoIncrement]
+    public int Id { get; set; }
+    public string Text { get; set; }
+    public string Corect { get; set; }
+    public string Prank { get; set; }
+    public int CategoryId { get; set; }
+
+    public string CategoryName;
+
+    public bool Played { get; set; }
+
+    public Question()
+    {
+
+    }
+
+    public string JSONString()
+    {
+        return string.Format(
+@"Id: {0},
+Text: {1},
+Corect: {2},
+Prank: {3},
+CategoryId: {4},
+            ",
+Id,
+Text,
+Corect,
+Prank,
+CategoryId
+            );
+    }
+}
+
 #endregion
 
 //public class Map

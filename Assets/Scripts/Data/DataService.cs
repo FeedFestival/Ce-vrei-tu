@@ -28,7 +28,7 @@ public class DataService
 
         if (!File.Exists(filepath))
         {
-            DebugPanel.Phone.Log("Database not in Persistent path");
+            Debug.Log("Database not in Persistent path");
             // if it doesn't ->
             // open StreamingAssets directory and load the db ->
 
@@ -57,7 +57,7 @@ public class DataService
 
 #endif
 
-            DebugPanel.Phone.Log("Database written");
+            Debug.Log("Database written");
         }
 
         var dbPath = filepath;
@@ -66,7 +66,7 @@ public class DataService
         #endregion
 
         _connection = new SQLiteConnection(dbPath, SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.Create);
-        DebugPanel.Phone.Log("Final PATH: " + dbPath);
+        Debug.Log("Final PATH: " + dbPath);
 
     }
 
@@ -75,13 +75,67 @@ public class DataService
         _connection.DropTable<User>();
         _connection.CreateTable<User>();
 
-        DebugPanel.Phone.Log("Created USER TABLE");
+        Debug.Log("Created USER TABLE");
+    }
+
+    public void RecreateCategoryTable()
+    {
+        _connection.DropTable<Category>();
+        _connection.CreateTable<Category>();
+
+        Debug.Log("Created CATEGORY TABLE");
+    }
+
+    public void RecreateQuestionTable()
+    {
+        _connection.DropTable<Question>();
+        _connection.CreateTable<Question>();
+
+        Debug.Log("Created QUESTION TABLE");
+    }
+
+    public void WriteCategoriesData(List<Category> categories)
+    {
+        _connection.InsertAll(categories);
+    }
+
+    public List<Category> GetAllCategories()
+    {
+        return _connection.Table<Category>().ToList();
+    }
+
+    public void WriteQuestionsData(List<Question> questions)
+    {
+        var savedCount = 0;
+        var updatedCount = 0;
+        foreach (Question question in questions)
+        {
+            var existingQuestion = _connection.Table<Question>().Where(x => x.Corect == question.Corect && x.Prank == question.Prank && x.CategoryId == question.CategoryId).FirstOrDefault();
+            if (existingQuestion == null)
+            {
+                _connection.Insert(question);
+                savedCount++;
+            }
+            else
+            {
+                _connection.Update(question);
+                updatedCount++;
+            }
+        }
+        //_connection.InsertAll(questions);
+
+        Debug.Log("Saved " + savedCount + " questions and updated " + updatedCount + " questions.");
+    }
+
+    public List<Question> GetAllQuestions()
+    {
+        return _connection.Table<Question>().ToList();
     }
 
     internal void WriteDefaultData()
     {
 
-        DebugPanel.Phone.Log("No Default data to write.");
+        Debug.Log("No Default data to write.");
     }
 
     public void CreateUser(User user)
@@ -92,7 +146,7 @@ public class DataService
     public void UpdateUser(User user)
     {
         int rowsAffected = _connection.Update(user);
-        DebugPanel.Phone.Log("(UPDATE User) rowsAffected : " + rowsAffected);
+        Debug.Log("(UPDATE User) rowsAffected : " + rowsAffected);
     }
 
     public User GetDeviceUser()

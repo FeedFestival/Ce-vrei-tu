@@ -13,7 +13,7 @@ public class GameEditor : Editor
     private bool _setupConfirm;
     public enum InspectorButton
     {
-        RecreateUserTable, WriteDefaultData
+        RecreateUserTable, RecreateCategoryTable, RecreateQuestionsTable, WriteCategoriesData, WriteQuestionsData, WriteDefaultData
     }
     private InspectorButton _actionTool;
     private InspectorButton _action
@@ -25,6 +25,8 @@ public class GameEditor : Editor
             _setupConfirm = true;
         }
     }
+
+    public TextAsset obj = null;
 
     public override void OnInspectorGUI()
     {
@@ -38,6 +40,24 @@ public class GameEditor : Editor
 
         if (GUILayout.Button("Recreate User Table"))
             _action = InspectorButton.RecreateUserTable;
+
+        if (GUILayout.Button("Recreate Category Table"))
+            _action = InspectorButton.RecreateCategoryTable;
+
+        if (GUILayout.Button("Recreate Questions Table"))
+            _action = InspectorButton.RecreateQuestionsTable;
+
+        GUILayout.Space(5);
+        GUILayout.Label("Write Data");
+        GUILayout.Space(5);
+
+        if (GUILayout.Button("Write Categories Data"))
+            _action = InspectorButton.WriteCategoriesData;
+
+        if (GUILayout.Button("Write Questions Data"))
+            _action = InspectorButton.WriteQuestionsData;
+
+        GUILayout.Space(5);
 
         if (GUILayout.Button("Write Default Data"))
             _action = InspectorButton.WriteDefaultData;
@@ -79,6 +99,26 @@ public class GameEditor : Editor
             case InspectorButton.RecreateUserTable:
 
                 _myScript.RecreateUserTable();
+                break;
+
+            case InspectorButton.RecreateCategoryTable:
+
+                _myScript.RecreateCategoryTable();
+                break;
+
+            case InspectorButton.RecreateQuestionsTable:
+
+                _myScript.RecreateQuestionTable();
+                break;
+
+            case InspectorButton.WriteCategoriesData:
+
+                _myScript.WriteCategoriesData();
+                break;
+
+            case InspectorButton.WriteQuestionsData:
+
+                _myScript.WriteQuestionsData();
                 break;
 
             case InspectorButton.WriteDefaultData:

@@ -46,6 +46,11 @@ public class Main : MonoBehaviour
 
     void Start()
     {
+        var questions = DomainLogic.DB.DataService.GetAllQuestions();
+        foreach (var item in questions)
+        {
+            Debug.Log(item.JSONString());
+        }
         /*
          * ---------------------------------------------------------------------
          * * ---------------------------------------------------------------------
