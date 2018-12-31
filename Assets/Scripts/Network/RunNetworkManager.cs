@@ -19,7 +19,7 @@ public class RunNetworkManager : NetworkManager
 
         DebugPanel.Phone.Log("AttemptConnect: " + hostId + ", " + networkAddress + ", " + networkPort + "... error: " + ((NetworkError)error).ToString());
 
-        Persistent.GameData.ConnectionId = NetworkTransport.Connect(hostId, networkAddress, networkPort, 0, out error);
+        Persistent.GameData.LoggedUser.ConnectionId = NetworkTransport.Connect(hostId, networkAddress, networkPort, 0, out error);
     }
     
     IEnumerator IfConnectedSendMessage()

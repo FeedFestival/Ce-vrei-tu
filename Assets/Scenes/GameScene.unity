@@ -214,6 +214,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c18c4fe0d59c634cab9a68ba80b9569, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  TimeSpeedText: {fileID: 0}
+  SimulationNetworkPrefab: {fileID: 7494009996728303746, guid: ef0566463512a814f98efe8c815e0feb,
+    type: 3}
 --- !u!1 &612797493
 GameObject:
   m_ObjectHideFlags: 0
@@ -423,6 +426,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c18c4fe0d59c634cab9a68ba80b9569, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  TimeSpeedText: {fileID: 0}
+  SimulationNetworkPrefab: {fileID: 0}
 --- !u!114 &1425060867
 MonoBehaviour:
   m_ObjectHideFlags: 0

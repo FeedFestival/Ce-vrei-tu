@@ -38,6 +38,8 @@ public class Main : MonoBehaviour
             {
                 IsSimulated = true;
                 var go = Instantiate(PersistentSimulated);
+
+                Persistent.GameData.IsServer = true;
             }
         }
     }

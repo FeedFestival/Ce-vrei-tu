@@ -2,7 +2,18 @@
 {
     None,
     ClientHandshake,
-    ServerHandshake
+    ServerHandshake,
+    SimpleMessage
+}
+
+public enum NetMessage
+{
+    None,
+    Ok,
+    No,
+    StartingGame,
+    DoPickCategory,
+    ConnectionIsPickingCategory
 }
 
 [System.Serializable]
@@ -42,3 +53,15 @@ public class NetServerUsers : NetMsg
     public System.Collections.Generic.List<NetClientUser> Users { get; set; }
 }
 
+[System.Serializable]
+public class SimpleMessage : NetMsg
+{
+    public SimpleMessage()
+    {
+        OP = (byte)Operation.SimpleMessage;
+    }
+    public byte MessageCode { get; set; }
+    public byte ThisMessageCodeIsFor { get; set; }
+    public int ConnId { get; set; }
+    public string MessageText { get; set; }
+}

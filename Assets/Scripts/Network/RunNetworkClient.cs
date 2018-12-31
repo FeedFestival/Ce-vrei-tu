@@ -21,12 +21,20 @@ public class RunNetworkClient : MonoBehaviour
 
     public delegate void OnJoinCallback();
     public delegate void OnJoinFailedCallback();
-
     public OnJoinCallback OnJoin;
     public OnJoinFailedCallback OnJoinFailed;
 
     public delegate void OnRecievedServerInfoCallback(int fromConnectionId, int fromChannelId, int fromHostId, List<User> users);
     public OnRecievedServerInfoCallback OnRecievedServerInfo;
+
+    public delegate void OnYourTurnToPickCategoryCallback();
+    public OnYourTurnToPickCategoryCallback OnYourTurnToPickCategory;
+
+    public delegate void OnCategoryPickingInfoCallback(int connectionIdThatPicksCategory);
+    public OnCategoryPickingInfoCallback OnCategoryPickingInfo;
+
+    public delegate void OnRecievedQuestionCallback();
+    public OnRecievedQuestionCallback OnRecievedQuestion;
     //
 
     private HostTopology _topology;
@@ -51,6 +59,9 @@ public class RunNetworkClient : MonoBehaviour
     private void Update()
     {
         UpdateMessagePump();
+
+        if (Main._.IsSimulated)
+            SimulationUpdate();
     }
 
     private void InitClient()
@@ -200,6 +211,21 @@ public class RunNetworkClient : MonoBehaviour
                 }
                 OnRecievedServerInfo(fromConnectionId, fromChannelId, fromHostId, users);
                 break;
+
+            case Operation.SimpleMessage:
+
+                var sMsg = (SimpleMessage)msg;
+
+                if ((NetMessage)sMsg.MessageCode == NetMessage.ConnectionIsPickingCategory)
+                {
+                    OnCategoryPickingInfo(sMsg.ConnId);
+                }
+                else if ((NetMessage)sMsg.MessageCode == NetMessage.DoPickCategory)
+                {
+                    OnYourTurnToPickCategory();
+                }
+                break;
+
             default:
                 break;
         }
@@ -215,6 +241,12 @@ public class RunNetworkClient : MonoBehaviour
 
     internal void SendToServer(NetMsg msg)
     {
+        if (Main._.IsSimulated)
+        {
+            SetSimulationForCallback(msg);
+            return;
+        }
+
         // this is where we hold our data.
         byte[] buffer = new byte[GameHiddenOptions.MAX_BYTE_SIZE];
 
@@ -225,7 +257,93 @@ public class RunNetworkClient : MonoBehaviour
         formatter.Serialize(ms, msg);
 
 
-        NetworkTransport.Send(HostId, Persistent.GameData.ConnectionId, ReliableChannel, buffer, GameHiddenOptions.MAX_BYTE_SIZE, out error);
+        NetworkTransport.Send(HostId, Persistent.GameData.LoggedUser.ConnectionId, ReliableChannel, buffer, GameHiddenOptions.MAX_BYTE_SIZE, out error);
         DebugPanel.Phone.Log("Try Sent message... error: " + (NetworkError)error);
+    }
+
+    //---------------//---------------//---------------//---------------//---------------//---------------//---------------
+    //---------------//---------------//---------------//---------------//---------------//---------------
+    // SIMULATION
+    //---------------//---------------//---------------
+    //---------------//---------------
+    //---------------
+
+    private NetMessage Expected_MessageCode;
+    private NetMessage Expected_MessageCodeIsFor;
+
+    private void SetSimulationForCallback(NetMsg msg)
+    {
+        switch ((Operation)msg.OP)
+        {
+            case Operation.SimpleMessage:
+
+                var sMsg = (SimpleMessage)msg;
+                Expected_MessageCodeIsFor = (NetMessage)sMsg.MessageCode;
+
+                switch (Expected_MessageCodeIsFor)
+                {
+                    case NetMessage.StartingGame:
+                        Expected_MessageCode = NetMessage.Ok;
+                        break;
+                    default:
+                        break;
+                }
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    private void SimulationUpdate()
+    {
+        if (Input.GetKeyUp(KeyCode.KeypadEnter))
+        {
+            NetMsg sMsg = null;
+
+            switch (Expected_MessageCodeIsFor)
+            {
+                default:
+                    break;
+            }
+            if (sMsg != null)
+            {
+                OnData(0, 0, 0, sMsg);
+            }
+        }
+
+        if (Input.GetKeyUp(KeyCode.Alpha1))
+        {
+            NetMsg sMsg = null;
+            sMsg = new SimpleMessage()
+            {
+                MessageCode = (byte)NetMessage.ConnectionIsPickingCategory,
+                ConnId = 2
+            };
+
+            OnData(0, 0, 0, sMsg);
+        }
+        if (Input.GetKeyUp(KeyCode.Alpha2))
+        {
+            NetMsg sMsg = null;
+            sMsg = new SimpleMessage()
+            {
+                MessageCode = (byte)NetMessage.DoPickCategory
+            };
+
+            OnData(0, 0, 0, sMsg);
+        }
+
+        if (Input.GetKeyUp(KeyCode.Alpha3))
+        {
+            NetMsg sMsg = null;
+            sMsg = new SimpleMessage()
+            {
+                MessageCode = (byte)NetMessage.DoPickCategory
+            };
+
+            OnData(0, 0, 0, sMsg);
+            //OnRecievedQuestion
+        }
     }
 }

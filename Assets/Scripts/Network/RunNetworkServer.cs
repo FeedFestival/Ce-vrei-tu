@@ -26,6 +26,14 @@ public class RunNetworkServer : MonoBehaviour
     public delegate void OnRecievedClientInfoCallback(int fromConnectionId, int fromChannelId, int fromHostId, User user);
     public OnRecievedClientInfoCallback OnRecievedClientInfo;
 
+    public delegate void OnClientsAcceptedStartingGameCallback(int fromConnectionId, NetMessage netMessage);
+    public OnClientsAcceptedStartingGameCallback OnClientsAcceptedStartingGame;
+
+    public delegate void OncategoryPickedCallback(int fromConnectionId, string category);
+    public OncategoryPickedCallback OncategoryPicked;
+
+    //public delegate void OnSimpleMessageCallback();
+    //public OnSimpleMessageCallback OnSimpleMessage;
     //
 
     private HostTopology _topology;
@@ -49,6 +57,9 @@ public class RunNetworkServer : MonoBehaviour
     private void Update()
     {
         UpdateMessagePump();
+
+        if (Main._.IsSimulated)
+            SimulationUpdate();
     }
 
     private void InitServer()
@@ -182,13 +193,37 @@ public class RunNetworkServer : MonoBehaviour
                 break;
             case Operation.ServerHandshake:
                 break;
+
+            case Operation.SimpleMessage:
+
+                var sMsg = (SimpleMessage)msg;
+
+                if ((NetMessage)sMsg.ThisMessageCodeIsFor == NetMessage.StartingGame)
+                {
+                    OnClientsAcceptedStartingGame(fromConnectionId, (NetMessage)sMsg.MessageCode);
+                }
+                else if ((NetMessage)sMsg.ThisMessageCodeIsFor == NetMessage.DoPickCategory)
+                {
+                    OncategoryPicked(fromConnectionId, sMsg.MessageText);
+                }
+
+                //OnSimpleMessage(fromConnectionId, msg);
+                break;
             default:
                 break;
         }
     }
 
-    internal void SendToClients(NetMsg msg, int[] connIds)
+    internal void SendToClients(NetMsg msg, int[] connIds = null, int? connectionId = null)
     {
+        if (Main._.IsSimulated)
+        {
+            if (connIds == null && connectionId.HasValue)
+                connIds = new int[1] { connectionId.Value };
+            SetSimulationForCallback(msg, connIds);
+            return;
+        }
+
         // this is where we hold our data.
         byte[] buffer = new byte[GameHiddenOptions.MAX_BYTE_SIZE];
 
@@ -198,9 +233,14 @@ public class RunNetworkServer : MonoBehaviour
         MemoryStream ms = new MemoryStream(buffer);
         formatter.Serialize(ms, msg);
 
+        if (connIds == null)
+            connIds = new int[1] { connectionId.Value };
+
+        if (connIds.Length == 0) return;
+
         foreach (var connId in connIds)
         {
-            if (connId == Persistent.GameData.ConnectionId)
+            if (connId == Persistent.GameData.LoggedUser.ConnectionId)
                 continue;
 
             NetworkTransport.Send(_hostId, connId, ReliableChannel, buffer, GameHiddenOptions.MAX_BYTE_SIZE, out error);
@@ -212,5 +252,77 @@ public class RunNetworkServer : MonoBehaviour
     {
         NetworkTransport.StopBroadcastDiscovery();
         NetworkTransport.RemoveHost(_hostId);
+    }
+
+
+    //---------------//---------------//---------------//---------------//---------------//---------------//---------------
+    //---------------//---------------//---------------//---------------//---------------//---------------
+    // SIMULATION
+    //---------------//---------------//---------------
+    //---------------//---------------
+    //---------------
+
+    private int[] _connIds;
+    private NetMessage Expected_MessageCode;
+    private NetMessage Expected_MessageCodeIsFor;
+
+    private void SetSimulationForCallback(NetMsg msg, int[] connIds)
+    {
+        switch ((Operation)msg.OP)
+        {
+            case Operation.SimpleMessage:
+
+                var sMsg = (SimpleMessage)msg;
+                Expected_MessageCodeIsFor = (NetMessage)sMsg.MessageCode;
+
+                switch (Expected_MessageCodeIsFor)
+                {
+                    case NetMessage.StartingGame:
+                        Expected_MessageCode = NetMessage.Ok;
+                        break;
+                    default:
+                        break;
+                }
+                break;
+
+            default:
+                break;
+        }
+
+        _connIds = connIds;
+    }
+
+    private void SimulationUpdate()
+    {
+        if (Input.GetKeyUp(KeyCode.KeypadEnter))
+        {
+            NetMsg sMsg = null;
+
+            switch (Expected_MessageCodeIsFor)
+            {
+                case NetMessage.StartingGame:
+
+                    sMsg = new SimpleMessage()
+                    {
+                        MessageCode = (byte)Expected_MessageCode,
+                        ThisMessageCodeIsFor = (byte)NetMessage.StartingGame
+                    };
+                    break;
+                case NetMessage.DoPickCategory:
+
+                    sMsg = new SimpleMessage()
+                    {
+                        MessageText = "Stiri",
+                        ThisMessageCodeIsFor = (byte)NetMessage.DoPickCategory
+                    };
+                    break;
+                default:
+                    break;
+            }
+            if (sMsg != null)
+            {
+                foreach (int id in _connIds) OnData(id, 0, 0, sMsg);
+            }
+        }
     }
 }

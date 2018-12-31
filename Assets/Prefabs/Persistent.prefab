@@ -284,6 +284,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   AvatarSprites: []
+  RunNetworkServer: {fileID: 805350372786545637}
+  RunNetworkClient: {fileID: 805350373563703629}
+  RunNetworkManager: {fileID: 805350372668862231}
   ConnectionId: 0
 --- !u!1 &805350373563703667
 GameObject:

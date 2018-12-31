@@ -15,8 +15,13 @@ public class Persistent : MonoBehaviour
     [HideInInspector]
     public List<Sprite> AvatarSprites;
 
-    [Header("Network Properties")]
-    public int ConnectionId;
+    [Header("Networking")]
+    public RunNetworkServer RunNetworkServer;
+    public RunNetworkClient RunNetworkClient;
+    public RunNetworkManager RunNetworkManager;
+
+    public bool IsServer;
+    //public int ConnectionId;
     public List<User> ServerUsers;
 
     //

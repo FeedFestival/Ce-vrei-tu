@@ -24,12 +24,6 @@ public class MainMenuController : MonoBehaviour
 
     private string _ipAddress;
 
-    [Header("Networking")]
-
-    public RunNetworkServer RunNetworkServer;
-    public RunNetworkClient RunNetworkClient;
-    public RunNetworkManager RunNetworkManager;
-
     internal void Init()
     {
         Sprite sprite = Resources.Load<Sprite>("Images/Avatars/" + Persistent.GameData.LoggedUser.ProfilePicIndex);
@@ -65,11 +59,11 @@ public class MainMenuController : MonoBehaviour
                 ConnectionStatusText.color = GameHiddenOptions.Instance.WhiteColor;
                 ConnectionStatusText.text = "";
 
-                if (RunNetworkClient.gameObject.activeSelf)
-                    RunNetworkClient.StartAsClient();
+                if (Persistent.GameData.RunNetworkClient.gameObject.activeSelf)
+                    Persistent.GameData.RunNetworkClient.StartAsClient();
                 else
-                    RunNetworkClient.gameObject.SetActive(true);
-                RunNetworkClient.OnListenSuccess = (string fromAddress, string data) =>
+                    Persistent.GameData.RunNetworkClient.gameObject.SetActive(true);
+                Persistent.GameData.RunNetworkClient.OnListenSuccess = (string fromAddress, string data) =>
                 {
                     RoomName.text = _ipAddress = fromAddress;
                     ChangeActionButton(ActionButtonFunction.Join);
@@ -84,7 +78,7 @@ public class MainMenuController : MonoBehaviour
                 LookingForRoomsPanel.SetActive(false);
                 ConnectionStatusText.text = "";
 
-                RunNetworkClient.StopListening();
+                Persistent.GameData.RunNetworkClient.StopListening();
 
                 ChangeActionButton(ActionButtonFunction.LookForGames);
                 break;
@@ -93,12 +87,12 @@ public class MainMenuController : MonoBehaviour
                 ConnectionStatusText.color = GameHiddenOptions.Instance.WhiteColor;
                 ConnectionStatusText.text = "CONNECTING...";
 
-                RunNetworkClient.FoundBroadscast = true;
-                RunNetworkClient.OnJoin = OnClientJoin;
-                RunNetworkClient.OnJoinFailed = OnClientJoinFailed;
-                RunNetworkClient.OnRecievedServerInfo = OnRecievedServerInfo;
+                Persistent.GameData.RunNetworkClient.FoundBroadscast = true;
+                Persistent.GameData.RunNetworkClient.OnJoin = OnClientJoin;
+                Persistent.GameData.RunNetworkClient.OnJoinFailed = OnClientJoinFailed;
+                Persistent.GameData.RunNetworkClient.OnRecievedServerInfo = OnRecievedServerInfo;
 
-                RunNetworkManager.JoinGame(RunNetworkClient.HostId, _ipAddress, RunNetworkClient.BroadcastPort);
+                Persistent.GameData.RunNetworkManager.JoinGame(Persistent.GameData.RunNetworkClient.HostId, _ipAddress, Persistent.GameData.RunNetworkClient.BroadcastPort);
 
                 break;
             case ActionButtonFunction.CreateCancel:
@@ -107,7 +101,7 @@ public class MainMenuController : MonoBehaviour
 
                 ChangeActionButton(ActionButtonFunction.LookForGames);
 
-                RunNetworkServer.StopBroadcast();
+                Persistent.GameData.RunNetworkServer.StopBroadcast();
                 break;
             case ActionButtonFunction.GoToLobby:
 
@@ -128,7 +122,7 @@ public class MainMenuController : MonoBehaviour
             Name = Persistent.GameData.LoggedUser.Name,
             Pic = Persistent.GameData.LoggedUser.ProfilePicIndex
         };
-        RunNetworkClient.SendToServer(msg);
+        Persistent.GameData.RunNetworkClient.SendToServer(msg);
 
         ChangeActionButton(ActionButtonFunction.GoToLobby);
     }
@@ -138,7 +132,7 @@ public class MainMenuController : MonoBehaviour
         ConnectionStatusText.color = GameHiddenOptions.Instance.RedColor;
         ConnectionStatusText.text = "FAILED";
 
-        RunNetworkClient.FoundBroadscast = false;
+        Persistent.GameData.RunNetworkClient.FoundBroadscast = false;
 
         ChangeActionButton(ActionButtonFunction.GiveUp);
     }
@@ -158,13 +152,13 @@ public class MainMenuController : MonoBehaviour
         ConnectionStatusText.color = GameHiddenOptions.Instance.WhiteColor;
         ConnectionStatusText.text = "BROADCASTING";
 
-        if (RunNetworkServer.gameObject.activeSelf)
-            RunNetworkServer.StartAsServer();
+        if (Persistent.GameData.RunNetworkServer.gameObject.activeSelf)
+            Persistent.GameData.RunNetworkServer.StartAsServer();
         else
-            RunNetworkServer.gameObject.SetActive(true);
+            Persistent.GameData.RunNetworkServer.gameObject.SetActive(true);
 
         // delegates
-        RunNetworkServer.OnConnectedToServer = () =>
+        Persistent.GameData.RunNetworkServer.OnConnectedToServer = () =>
         {
             _numberOfConnections++;
             RoomName.text = "Game Created";
@@ -173,7 +167,7 @@ public class MainMenuController : MonoBehaviour
 
             ShowGoToLobbyButton();
         };
-        RunNetworkServer.OnDisconnectedFromServer = (fromConnectionId) =>
+        Persistent.GameData.RunNetworkServer.OnDisconnectedFromServer = (fromConnectionId) =>
         {
             _numberOfConnections--;
             RoomName.text = "Game Created";
@@ -186,7 +180,7 @@ public class MainMenuController : MonoBehaviour
 
             ShowGoToLobbyButton();
         };
-        RunNetworkServer.OnRecievedClientInfo = (int fromConnectionId, int fromChannelId, int fromHostId, User user) =>
+        Persistent.GameData.RunNetworkServer.OnRecievedClientInfo = (int fromConnectionId, int fromChannelId, int fromHostId, User user) =>
         {
             DebugPanel.Phone.Log(" Someone is in lobby - " + user.ToString());
 
@@ -213,7 +207,7 @@ public class MainMenuController : MonoBehaviour
         }
         var netServerUsers = new NetServerUsers() { Users = users };
         var connectedUsersIds = Persistent.GameData.ServerUsers.Select(u => u.ConnectionId).ToArray();
-        RunNetworkServer.SendToClients(netServerUsers, connectedUsersIds);
+        Persistent.GameData.RunNetworkServer.SendToClients(netServerUsers, connectedUsersIds);
     }
 
     private void ShowGoToLobbyButton()
