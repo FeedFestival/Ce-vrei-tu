@@ -16,6 +16,8 @@ public class RunNetworkClient : MonoBehaviour
     public bool IsRunning;
     public bool FoundBroadscast;
 
+    private RunNetworkSimulation _networkSimulation;
+
     public delegate void OnListenSuccessCallback(string fromAddress, string data);
     public OnListenSuccessCallback OnListenSuccess;
 
@@ -33,7 +35,7 @@ public class RunNetworkClient : MonoBehaviour
     public delegate void OnCategoryPickingInfoCallback(int connectionIdThatPicksCategory);
     public OnCategoryPickingInfoCallback OnCategoryPickingInfo;
 
-    public delegate void OnRecievedQuestionCallback();
+    public delegate void OnRecievedQuestionCallback(QuestionMessage questionMessage = null);
     public OnRecievedQuestionCallback OnRecievedQuestion;
     //
 
@@ -59,9 +61,6 @@ public class RunNetworkClient : MonoBehaviour
     private void Update()
     {
         UpdateMessagePump();
-
-        if (Main._.IsSimulated)
-            SimulationUpdate();
     }
 
     private void InitClient()
@@ -215,7 +214,6 @@ public class RunNetworkClient : MonoBehaviour
             case Operation.SimpleMessage:
 
                 var sMsg = (SimpleMessage)msg;
-
                 if ((NetMessage)sMsg.MessageCode == NetMessage.ConnectionIsPickingCategory)
                 {
                     OnCategoryPickingInfo(sMsg.ConnId);
@@ -224,6 +222,13 @@ public class RunNetworkClient : MonoBehaviour
                 {
                     OnYourTurnToPickCategory();
                 }
+                break;
+
+            case Operation.SendQuestion:
+
+                var qMsg = (QuestionMessage)msg;
+                OnRecievedQuestion(qMsg);
+
                 break;
 
             default:
@@ -239,11 +244,20 @@ public class RunNetworkClient : MonoBehaviour
         DebugPanel.Phone.Log("Stop Listening HostId: " + HostId);
     }
 
+    public void StartSimulation(RunNetworkSimulation networkSimulation)
+    {
+        if (IsRunning)
+            StopListening();
+
+        _networkSimulation = networkSimulation;
+        _networkSimulation.OnData = OnData;
+    }
+
     internal void SendToServer(NetMsg msg)
     {
         if (Main._.IsSimulated)
         {
-            SetSimulationForCallback(msg);
+            _networkSimulation.SendToServer(msg);
             return;
         }
 
@@ -259,91 +273,5 @@ public class RunNetworkClient : MonoBehaviour
 
         NetworkTransport.Send(HostId, Persistent.GameData.LoggedUser.ConnectionId, ReliableChannel, buffer, GameHiddenOptions.MAX_BYTE_SIZE, out error);
         DebugPanel.Phone.Log("Try Sent message... error: " + (NetworkError)error);
-    }
-
-    //---------------//---------------//---------------//---------------//---------------//---------------//---------------
-    //---------------//---------------//---------------//---------------//---------------//---------------
-    // SIMULATION
-    //---------------//---------------//---------------
-    //---------------//---------------
-    //---------------
-
-    private NetMessage Expected_MessageCode;
-    private NetMessage Expected_MessageCodeIsFor;
-
-    private void SetSimulationForCallback(NetMsg msg)
-    {
-        switch ((Operation)msg.OP)
-        {
-            case Operation.SimpleMessage:
-
-                var sMsg = (SimpleMessage)msg;
-                Expected_MessageCodeIsFor = (NetMessage)sMsg.MessageCode;
-
-                switch (Expected_MessageCodeIsFor)
-                {
-                    case NetMessage.StartingGame:
-                        Expected_MessageCode = NetMessage.Ok;
-                        break;
-                    default:
-                        break;
-                }
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    private void SimulationUpdate()
-    {
-        if (Input.GetKeyUp(KeyCode.KeypadEnter))
-        {
-            NetMsg sMsg = null;
-
-            switch (Expected_MessageCodeIsFor)
-            {
-                default:
-                    break;
-            }
-            if (sMsg != null)
-            {
-                OnData(0, 0, 0, sMsg);
-            }
-        }
-
-        if (Input.GetKeyUp(KeyCode.Alpha1))
-        {
-            NetMsg sMsg = null;
-            sMsg = new SimpleMessage()
-            {
-                MessageCode = (byte)NetMessage.ConnectionIsPickingCategory,
-                ConnId = 2
-            };
-
-            OnData(0, 0, 0, sMsg);
-        }
-        if (Input.GetKeyUp(KeyCode.Alpha2))
-        {
-            NetMsg sMsg = null;
-            sMsg = new SimpleMessage()
-            {
-                MessageCode = (byte)NetMessage.DoPickCategory
-            };
-
-            OnData(0, 0, 0, sMsg);
-        }
-
-        if (Input.GetKeyUp(KeyCode.Alpha3))
-        {
-            NetMsg sMsg = null;
-            sMsg = new SimpleMessage()
-            {
-                MessageCode = (byte)NetMessage.DoPickCategory
-            };
-
-            OnData(0, 0, 0, sMsg);
-            //OnRecievedQuestion
-        }
     }
 }

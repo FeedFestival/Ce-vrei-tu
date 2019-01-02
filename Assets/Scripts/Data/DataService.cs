@@ -104,6 +104,11 @@ public class DataService
         return _connection.Table<Category>().ToList();
     }
 
+    public Category GetCategory(int categoryId)
+    {
+        return _connection.Table<Category>().Where(c => c.Id == categoryId).FirstOrDefault();
+    }
+
     public void WriteQuestionsData(List<Question> questions)
     {
         var savedCount = 0;
@@ -130,6 +135,47 @@ public class DataService
     public List<Question> GetAllQuestions()
     {
         return _connection.Table<Question>().ToList();
+    }
+
+    public int[] GetQuestionsIdsByCategory(int categoryId)
+    {
+        return _connection.Table<Question>().Where(q => q.CategoryId == categoryId && q.Played == false).Select(q => q.Id).ToArray();
+    }
+
+    public Question GetQuestion(int questionId)
+    {
+        return _connection.Table<Question>().Where(q => q.Id == questionId).FirstOrDefault();
+    }
+
+    public Question GetRandomQuestionByCategory(int? categoryId = null)
+    {
+        int[] questionIds;
+        if (categoryId == null)
+            questionIds = _connection.Table<Question>().ToList().Select(q => q.Id).ToArray();
+        else
+            questionIds = _connection.Table<Question>().Where(q => q.CategoryId == categoryId && q.Played == false).ToList().Select(q => q.Id).ToArray();
+
+        if (questionIds == null || questionIds.Length == 0)
+        {
+            // reset the question played state
+            ResetQuestionPlayedState(categoryId);
+            return GetRandomQuestionByCategory(categoryId);
+        }
+
+        var index = UnityEngine.Random.Range(0, questionIds.Length - 1);
+        var questionId = questionIds[index];
+
+        return GetQuestion(questionId);
+    }
+
+    public void ResetQuestionPlayedState(int? categoryId)
+    {
+        if (categoryId == null)
+        {
+            _connection.ExecuteSql(" UPDATE Question SET Played = 0 ");
+            return;
+        }
+        _connection.ExecuteSql(" UPDATE Question SET Played = 0 WHERE CategoryId = " + categoryId);
     }
 
     internal void WriteDefaultData()

@@ -7,14 +7,31 @@ using UnityEngine.UI;
 
 public class Game : MonoBehaviour
 {
-    public Text TimeSpeedText;
+    [Header("Game States")]
+    public GameObject SelectCategoryPanel;
 
+    [Header("Debug Variables")]
+    [HideInInspector]
+    public Text TimeSpeedText;
     public GameObject SimulationNetworkPrefab;
 
-    private Dictionary<int, bool> _clientsAcceptance;
+    //
+
+    private Dictionary<int, bool> _playersAcceptance;
+    private Dictionary<int, string> _playersLies;
 
     private int _currentPlayerIndex;
     private int[] _orderedPlayers;
+    private delegate void NextPhaseOfTheGameCallback();
+
+    private Question _currentQuestion;
+
+    private enum PhaseOfTheGame
+    {
+        StartGame,
+        InputLies
+    }
+    private PhaseOfTheGame _phaseOfTheGame;
 
     internal void LoadDependencies()
     {
@@ -23,29 +40,34 @@ public class Game : MonoBehaviour
 
     internal void StartGame()
     {
-        if (Main._.IsSimulated) SimulateStartGame();
+        if (Main._.IsSimulated)
+        {
+            var go = Instantiate(SimulationNetworkPrefab);
+            go.GetComponent<RunNetworkSimulation>().Init();
+        }
 
         if (Persistent.GameData.IsServer)
         {
             Persistent.GameData.RunNetworkServer.OnClientsAcceptedStartingGame = OnClientsAcceptedStartingGame;
 
+            InitClientAcceptance();
+
             var netMsg = new SimpleMessage()
             {
                 MessageCode = (byte)NetMessage.StartingGame
             };
-
-            if (_clientsAcceptance == null)
-                InitClientAcceptance();
+            Persistent.GameData.RunNetworkServer.SendToClients(netMsg, _playersAcceptance.Keys.ToArray());
 
             DebugPanel.Phone.Log("1. SERVER tell other CLIENTS game is starting. Wait for response from all.");
 
-            Persistent.GameData.RunNetworkServer.SendToClients(netMsg, _clientsAcceptance.Keys.ToArray());
+            OnClientsAcceptedStartingGame(Persistent.GameData.LoggedUser.ConnectionId, NetMessage.Ok);
         }
         else
         {
-            // here as a CLIENT we came when we recieved from SERVER the:  (byte)NetMessage.StartingGame - MessageCode
-
-            // now we have to send 'OK' TO the SERVER.
+            DebugPanel.Phone.Log(@"1. - here as a CLIENT we came when we recieved from SERVER the StartingGame MessageCode.
+    - now we have to send 'OK' TO the SERVER.
+            ");
+            
             var netMsg = new SimpleMessage()
             {
                 MessageCode = (byte)NetMessage.Ok,
@@ -53,9 +75,9 @@ public class Game : MonoBehaviour
             };
             Persistent.GameData.RunNetworkClient.SendToServer(netMsg);
 
-            DebugPanel.Phone.Log("2.    SERVER will send [1](YourTurnToPick), [2](PickingInfo).");
+            if (Main._.IsSimulated)
+                DebugPanel.Phone.Log("2.    SERVER will eventually send [1](YourTurnToPick), [2](PickingInfo).");
 
-            // now we wait for SERVER to SEND US WHO IS PICKING THE CATEOGRY.
             Persistent.GameData.RunNetworkClient.OnYourTurnToPickCategory = OnYourTurnToPickCategory;
             Persistent.GameData.RunNetworkClient.OnCategoryPickingInfo = OnCategoryPickingInfo;
             // 
@@ -68,27 +90,10 @@ public class Game : MonoBehaviour
 
     private void OnClientsAcceptedStartingGame(int fromConnectionId, NetMessage netMessage)
     {
-        bool ok = netMessage == NetMessage.Ok;
         DebugPanel.Phone.Log(" ConnectionId: " + fromConnectionId + " replied with " + netMessage);
 
-        _clientsAcceptance[fromConnectionId] = true;
-
-        bool canWeAdvance = true;
-        foreach (var client in _clientsAcceptance)
-        {
-            if (client.Value == false)
-            {
-                canWeAdvance = false;
-                break;
-            }
-        }
-
-        if (canWeAdvance)
-        {
-            _clientsAcceptance = null;
-            OrderPlayers();
-            StartActualGame();
-        }
+        _playersAcceptance[fromConnectionId] = netMessage == NetMessage.Ok;
+        CanWeAdvance(StartActualGame);
     }
 
     private void OrderPlayers()
@@ -97,14 +102,14 @@ public class Game : MonoBehaviour
 
         System.Random rnd = new System.Random();
         _orderedPlayers = _orderedPlayers.OrderBy(x => rnd.Next()).ToArray();
+        _currentPlayerIndex = -1;
 
         DebugPanel.Phone.Log(" 2.   - Order is randomized: " + _orderedPlayers);
     }
 
     public void StartActualGame()
     {
-        _currentPlayerIndex = -1;
-
+        OrderPlayers();
         NextPlayerTurn();
     }
 
@@ -135,23 +140,39 @@ public class Game : MonoBehaviour
         Persistent.GameData.RunNetworkServer.SendToClients(sMsg, connectionId: currentConnectionId);
     }
 
-    private void OncategoryPicked(int fromConnectionId, string category)
+    private void OncategoryPicked(int fromConnectionId, int categoryId)
     {
-        DebugPanel.Phone.Log(" 3. Category was picked, its \"" + category + "\". Now let's find a Good Question.");
+        var category = DomainLogic.DB.DataService.GetCategory(categoryId);
+        DebugPanel.Phone.Log(" 3. Category was picked, its \"" + category.Name + "\". Now let's find a Good Question.");
+
+        _currentQuestion = DomainLogic.DB.DataService.GetRandomQuestionByCategory(category.Id);
+
+        DebugPanel.Phone.Log(" 4. Found a question now lets send it to everyone");
+        DebugPanel.Phone.Log("       - AND - Wait for everyones response: ");
+
+        _phaseOfTheGame = PhaseOfTheGame.InputLies;
+        InitClientLies();
+
+        var qMsg = new QuestionMessage()
+        {
+            Question = _currentQuestion
+        };
+        Persistent.GameData.RunNetworkServer.OnClientsAddedLies = OnClientsAddedLies;
+        Persistent.GameData.RunNetworkServer.SendToClients(qMsg, _playersLies.Keys.ToArray());
+
+        OnRecievedQuestion();
     }
 
-    private void InitClientAcceptance()
+    public void OnClientsAddedLies(int fromConnectionId, string lie)
     {
-        if (_clientsAcceptance == null)
-            _clientsAcceptance = new Dictionary<int, bool>();
 
-        //if (_clientsAcceptance.Count == Persistent.GameData.ServerUsers)
 
-        var connIds = Persistent.GameData.ServerUsers.Select(u => u.ConnectionId).ToArray();
-        foreach (var id in connIds)
-        {
-            _clientsAcceptance.Add(id, false);
-        }
+        CanWeAdvance(StartPickAnswersPhase);
+    }
+
+    public void StartPickAnswersPhase()
+    {
+
     }
 
     #endregion
@@ -173,25 +194,68 @@ public class Game : MonoBehaviour
         var userPicking = Persistent.GameData.ServerUsers.Where(u => u.ConnectionId == connectionIdThatPicksCategory).FirstOrDefault();
 
         DebugPanel.Phone.Log("      - The SERVER tolds us that this user is picking: " + userPicking);
+
+        if (Main._.IsSimulated)
+            DebugPanel.Phone.Log("3.    - Press [4](Server will send a question) ...");
     }
 
     public void OnChosingCategory()
     {
-
         var netMsg = new SimpleMessage()
         {
             MessageText = "Stiri",
             ThisMessageCodeIsFor = (byte)NetMessage.DoPickCategory
         };
         Persistent.GameData.RunNetworkClient.SendToServer(netMsg);
+
+        if (Main._.IsSimulated)
+            DebugPanel.Phone.Log("3.    - Press [4](Server will send a question) ...");
     }
 
     #endregion
 
     #region S/C Shared Methods
 
-    public void OnRecievedQuestion()
+    private void CanWeAdvance(NextPhaseOfTheGameCallback nextPhaseOfTheGame)
     {
+        bool canWeAdvance = true;
+        switch (_phaseOfTheGame)
+        {
+            case PhaseOfTheGame.StartGame:
+                foreach (var client in _playersAcceptance)
+                {
+                    if (client.Value == false)
+                    {
+                        canWeAdvance = false;
+                        break;
+                    }
+                }
+                break;
+            case PhaseOfTheGame.InputLies:
+                foreach (var client in _playersLies)
+                {
+                    if (string.IsNullOrWhiteSpace(client.Value))
+                    {
+                        canWeAdvance = false;
+                        break;
+                    }
+                }
+                break;
+            default:
+                break;
+        }
+
+        if (canWeAdvance)
+            nextPhaseOfTheGame();
+    }
+
+    public void OnRecievedQuestion(QuestionMessage questionMessage = null)
+    {
+        if (questionMessage != null) 
+            _currentQuestion = questionMessage.Question;
+
+        DebugPanel.Phone.Log("3.    SERVER sent question: " + _currentQuestion.Text);
+
         // Display Question
 
         // Display INput
@@ -199,48 +263,48 @@ public class Game : MonoBehaviour
 
     #endregion
 
-
-
-    #region Simulation Functions
-
-    private void SimulateStartGame()
+    private void InitClientAcceptance()
     {
-        var go = Instantiate(SimulationNetworkPrefab);
+        if (_playersAcceptance == null)
+        {
+            _playersAcceptance = new Dictionary<int, bool>();
 
-        if (Persistent.GameData.IsServer)
-            Persistent.GameData.RunNetworkServer.gameObject.SetActive(true);
+            var connIds = Persistent.GameData.ServerUsers.Select(u => u.ConnectionId).ToArray();
+            foreach (var id in connIds) { _playersAcceptance.Add(id, false); }
+        }
         else
-            Persistent.GameData.RunNetworkClient.gameObject.SetActive(true);
-
-        Persistent.GameData.LoggedUser = DomainLogic.DB.DataService.GetDeviceUser();
-
-        Persistent.GameData.ServerUsers = new List<User>() {
-            Persistent.GameData.LoggedUser,
-
-            new User() { ConnectionId = 1, Name = "Player2", ProfilePicIndex = 11, Saying = "Player2 Saying" },
-            new User() { ConnectionId = 2, Name = "Player3", ProfilePicIndex = 4, Saying = "Player3 Saying" },
-            new User() { ConnectionId = 3, Name = "Player4", ProfilePicIndex = 7, Saying = "Player4 Saying" }
-        };
+        {
+            var keyArray = _playersAcceptance.Keys.ToArray();
+            foreach (var playerId in keyArray) { _playersAcceptance[playerId] = false; }
+        }
     }
 
+    private void InitClientLies()
+    {
+        if (_playersLies == null)
+        {
+            _playersLies = new Dictionary<int, string>();
 
+            var connIds = Persistent.GameData.ServerUsers.Select(u => u.ConnectionId).ToArray();
+            foreach (var id in connIds) { _playersLies.Add(id, string.Empty); }
+        }
+        else
+        {
+            var keyArray = _playersLies.Keys.ToArray();
+            foreach (var playerId in keyArray)
+            {
+                _playersLies[playerId] = string.Empty;
+            }
+        }
+    }
 
-    #endregion
-
-
-    #region Global WaitForSeconds, TimeSpeed
+    #region TimeSpeed DEBUG Functions
 
     private float _timeSpeed = 1.0f;
-
-    /// <summary>
-    /// Usefull for debuging
-    /// </summary>
     public void ChangeTimeSpeed(float timeSpeed)
     {
         Time.timeScale = timeSpeed;
     }
-
-    #endregion
 
     void Update()
     {
@@ -266,4 +330,6 @@ public class Game : MonoBehaviour
             Time.timeScale = _timeSpeed;
         }
     }
+
+    #endregion
 }

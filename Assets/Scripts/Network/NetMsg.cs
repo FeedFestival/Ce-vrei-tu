@@ -3,7 +3,8 @@
     None,
     ClientHandshake,
     ServerHandshake,
-    SimpleMessage
+    SimpleMessage,
+    SendQuestion
 }
 
 public enum NetMessage
@@ -13,7 +14,8 @@ public enum NetMessage
     No,
     StartingGame,
     DoPickCategory,
-    ConnectionIsPickingCategory
+    ConnectionIsPickingCategory,
+    ThisIsTheQuestion
 }
 
 [System.Serializable]
@@ -64,4 +66,16 @@ public class SimpleMessage : NetMsg
     public byte ThisMessageCodeIsFor { get; set; }
     public int ConnId { get; set; }
     public string MessageText { get; set; }
+    public int MessageId { get; set; }
+}
+
+[System.Serializable]
+public class QuestionMessage : NetMsg
+{
+    public QuestionMessage()
+    {
+        OP = (byte)Operation.SendQuestion;
+    }
+    
+    public Question Question { get; set; }
 }

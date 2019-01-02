@@ -16,6 +16,8 @@ public class RunNetworkServer : MonoBehaviour
 
     public bool IsRunning;
 
+    private RunNetworkSimulation _networkSimulation;
+
     public delegate void OnConnectedToServerCallback();
     public OnConnectedToServerCallback OnConnectedToServer;
     public delegate void OnDisconnectedFromServerCallback(int fromConnectionId);
@@ -29,12 +31,11 @@ public class RunNetworkServer : MonoBehaviour
     public delegate void OnClientsAcceptedStartingGameCallback(int fromConnectionId, NetMessage netMessage);
     public OnClientsAcceptedStartingGameCallback OnClientsAcceptedStartingGame;
 
-    public delegate void OncategoryPickedCallback(int fromConnectionId, string category);
+    public delegate void OncategoryPickedCallback(int fromConnectionId, int categoryId);
     public OncategoryPickedCallback OncategoryPicked;
 
-    //public delegate void OnSimpleMessageCallback();
-    //public OnSimpleMessageCallback OnSimpleMessage;
-    //
+    public delegate void OnClientsAddedLiesCallback(int fromConnectionId, string lie);
+    public OnClientsAddedLiesCallback OnClientsAddedLies;
 
     private HostTopology _topology;
     private QosType QosType;
@@ -57,9 +58,6 @@ public class RunNetworkServer : MonoBehaviour
     private void Update()
     {
         UpdateMessagePump();
-
-        if (Main._.IsSimulated)
-            SimulationUpdate();
     }
 
     private void InitServer()
@@ -204,7 +202,7 @@ public class RunNetworkServer : MonoBehaviour
                 }
                 else if ((NetMessage)sMsg.ThisMessageCodeIsFor == NetMessage.DoPickCategory)
                 {
-                    OncategoryPicked(fromConnectionId, sMsg.MessageText);
+                    OncategoryPicked(fromConnectionId, sMsg.MessageId);
                 }
 
                 //OnSimpleMessage(fromConnectionId, msg);
@@ -218,9 +216,7 @@ public class RunNetworkServer : MonoBehaviour
     {
         if (Main._.IsSimulated)
         {
-            if (connIds == null && connectionId.HasValue)
-                connIds = new int[1] { connectionId.Value };
-            SetSimulationForCallback(msg, connIds);
+            _networkSimulation.SendToClients(msg, connIds, connectionId);
             return;
         }
 
@@ -254,75 +250,12 @@ public class RunNetworkServer : MonoBehaviour
         NetworkTransport.RemoveHost(_hostId);
     }
 
-
-    //---------------//---------------//---------------//---------------//---------------//---------------//---------------
-    //---------------//---------------//---------------//---------------//---------------//---------------
-    // SIMULATION
-    //---------------//---------------//---------------
-    //---------------//---------------
-    //---------------
-
-    private int[] _connIds;
-    private NetMessage Expected_MessageCode;
-    private NetMessage Expected_MessageCodeIsFor;
-
-    private void SetSimulationForCallback(NetMsg msg, int[] connIds)
+    public void StartSimulation(RunNetworkSimulation networkSimulation)
     {
-        switch ((Operation)msg.OP)
-        {
-            case Operation.SimpleMessage:
+        if (IsRunning)
+            StopBroadcast();
 
-                var sMsg = (SimpleMessage)msg;
-                Expected_MessageCodeIsFor = (NetMessage)sMsg.MessageCode;
-
-                switch (Expected_MessageCodeIsFor)
-                {
-                    case NetMessage.StartingGame:
-                        Expected_MessageCode = NetMessage.Ok;
-                        break;
-                    default:
-                        break;
-                }
-                break;
-
-            default:
-                break;
-        }
-
-        _connIds = connIds;
-    }
-
-    private void SimulationUpdate()
-    {
-        if (Input.GetKeyUp(KeyCode.KeypadEnter))
-        {
-            NetMsg sMsg = null;
-
-            switch (Expected_MessageCodeIsFor)
-            {
-                case NetMessage.StartingGame:
-
-                    sMsg = new SimpleMessage()
-                    {
-                        MessageCode = (byte)Expected_MessageCode,
-                        ThisMessageCodeIsFor = (byte)NetMessage.StartingGame
-                    };
-                    break;
-                case NetMessage.DoPickCategory:
-
-                    sMsg = new SimpleMessage()
-                    {
-                        MessageText = "Stiri",
-                        ThisMessageCodeIsFor = (byte)NetMessage.DoPickCategory
-                    };
-                    break;
-                default:
-                    break;
-            }
-            if (sMsg != null)
-            {
-                foreach (int id in _connIds) OnData(id, 0, 0, sMsg);
-            }
-        }
+        _networkSimulation = networkSimulation;
+        _networkSimulation.OnData = OnData;
     }
 }
