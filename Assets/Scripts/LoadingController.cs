@@ -79,8 +79,7 @@ public class LoadingController : MonoBehaviour
 
     IEnumerator AnimateDots()
     {
-        var time = GameHiddenOptions.Instance.GetTime(_dotsAnimationTimeout);
-        yield return new WaitForSeconds(time);
+        yield return new WaitForSeconds(_dotsAnimationTimeout);
 
         if (_dotCount > 3)
             _dotCount = 1;

@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public class Game : MonoBehaviour
 {
     [Header("Game States")]
+    public StartGamePanelController StartGamePanel;
     public GameObject SelectCategoryPanel;
 
     [Header("Debug Variables")]
@@ -35,7 +36,8 @@ public class Game : MonoBehaviour
 
     internal void LoadDependencies()
     {
-
+        StartGamePanel.gameObject.SetActive(true);
+        SelectCategoryPanel.SetActive(false);
     }
 
     internal void StartGame()
@@ -45,6 +47,8 @@ public class Game : MonoBehaviour
             var go = Instantiate(SimulationNetworkPrefab);
             go.GetComponent<RunNetworkSimulation>().Init();
         }
+
+        StartGamePanel.Init();
 
         if (Persistent.GameData.IsServer)
         {
@@ -138,6 +142,12 @@ public class Game : MonoBehaviour
         };
         Persistent.GameData.RunNetworkServer.OncategoryPicked = OncategoryPicked;
         Persistent.GameData.RunNetworkServer.SendToClients(sMsg, connectionId: currentConnectionId);
+
+        // here the host needs to recieve the category info too. if he is not to pick.
+        OnCategoryPickingInfo(currentConnectionId);
+
+        // !IMPORTANT
+        // we also need to determine if host is the player that needs to pick category !!!
     }
 
     private void OncategoryPicked(int fromConnectionId, int categoryId)
@@ -183,6 +193,12 @@ public class Game : MonoBehaviour
 
     private void OnYourTurnToPickCategory()
     {
+        if (StartGamePanel.gameObject.activeSelf)
+            StartGamePanel.GameIsReady(() => {
+                SelectCategoryPanel.SetActive(true);
+                // show input for picking category
+            });
+
         DebugPanel.Phone.Log("      - The SERVER has said it's my turn !");
 
         // this needs to be called from an input
@@ -191,6 +207,12 @@ public class Game : MonoBehaviour
 
     private void OnCategoryPickingInfo(int connectionIdThatPicksCategory)
     {
+        if (StartGamePanel.gameObject.activeSelf)
+            StartGamePanel.GameIsReady(() => {
+                SelectCategoryPanel.SetActive(true);
+                // show info message on who is picking.
+            });
+
         var userPicking = Persistent.GameData.ServerUsers.Where(u => u.ConnectionId == connectionIdThatPicksCategory).FirstOrDefault();
 
         DebugPanel.Phone.Log("      - The SERVER tolds us that this user is picking: " + userPicking);
