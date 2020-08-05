@@ -9,22 +9,28 @@ public class Game : MonoBehaviour
 {
     [Header("Game States")]
     public StartGamePanelController StartGamePanel;
-    public GameObject SelectCategoryPanel;
+    public SelectCategoryPanelController SelectCategoryPanel;
+    public SomeoneSelectingCategoryPanelController SomeoneSelectingCategoryPanel;
+    public QuestionAndAnswerPanelController QuestionAndAnswerPanel;
 
     [Header("Debug Variables")]
     [HideInInspector]
     public Text TimeSpeedText;
     public GameObject SimulationNetworkPrefab;
 
+    public bool CategoryPicked;
     //
 
     private Dictionary<int, bool> _playersAcceptance;
     private Dictionary<int, string> _playersLies;
 
     private int _currentPlayerIndex;
+    private int _currentlyPickingConnectionId;
+
     private int[] _orderedPlayers;
     private delegate void NextPhaseOfTheGameCallback();
 
+    List<Category> AllCategories;
     private Question _currentQuestion;
 
     private enum PhaseOfTheGame
@@ -37,11 +43,15 @@ public class Game : MonoBehaviour
     internal void LoadDependencies()
     {
         StartGamePanel.gameObject.SetActive(true);
-        SelectCategoryPanel.SetActive(false);
+        SelectCategoryPanel.gameObject.SetActive(false);
+        SomeoneSelectingCategoryPanel.gameObject.SetActive(false);
+        QuestionAndAnswerPanel.gameObject.SetActive(false);
     }
 
     internal void StartGame()
     {
+        CategoryPicked = false;
+
         if (Main._.IsSimulated)
         {
             var go = Instantiate(SimulationNetworkPrefab);
@@ -64,14 +74,17 @@ public class Game : MonoBehaviour
 
             DebugPanel.Phone.Log("1. SERVER tell other CLIENTS game is starting. Wait for response from all.");
 
+            // this user hosting accept automatically.
             OnClientsAcceptedStartingGame(Persistent.GameData.LoggedUser.ConnectionId, NetMessage.Ok);
+
+            DebugPanel.Phone.Log("      - Press ENTER to recieve Ok's from Clients.");
         }
         else
         {
             DebugPanel.Phone.Log(@"1. - here as a CLIENT we came when we recieved from SERVER the StartingGame MessageCode.
     - now we have to send 'OK' TO the SERVER.
             ");
-            
+
             var netMsg = new SimpleMessage()
             {
                 MessageCode = (byte)NetMessage.Ok,
@@ -87,6 +100,8 @@ public class Game : MonoBehaviour
             // 
             Persistent.GameData.RunNetworkClient.OnRecievedQuestion = OnRecievedQuestion;
         }
+
+        StartCoroutine(GetCategoriesAsync());
     }
 
     #region Server Methods
@@ -121,41 +136,57 @@ public class Game : MonoBehaviour
     {
         NetMsg sMsg;
         _currentPlayerIndex++;
-        var currentConnectionId = _orderedPlayers[_currentPlayerIndex];
-        var currentPlayer = Persistent.GameData.ServerUsers.Where(u => u.ConnectionId == currentConnectionId).FirstOrDefault();
+        _currentlyPickingConnectionId = _orderedPlayers[_currentPlayerIndex];
 
+        // [TESTING] - this is so we can hardcode the user picking category
+        _currentlyPickingConnectionId = Persistent.GameData.LoggedUser.ConnectionId;
+
+        var currentPlayer = Persistent.GameData.ServerUsers.Where(u => u.ConnectionId == _currentlyPickingConnectionId).FirstOrDefault();
+
+        DebugPanel.Phone.Log("      - Pick one player ! User: " + currentPlayer);
         DebugPanel.Phone.Log("      - Send other players the info of who is chosing category ");
 
         sMsg = new SimpleMessage()
         {
             MessageCode = (byte)NetMessage.ConnectionIsPickingCategory,
-            ConnId = currentConnectionId
+            ConnId = _currentlyPickingConnectionId
         };
-        var remainingPlayers = _orderedPlayers.Where(p => p != currentConnectionId).ToArray();
+        var remainingPlayers = _orderedPlayers.Where(p => p != _currentlyPickingConnectionId).ToArray();
         Persistent.GameData.RunNetworkServer.SendToClients(sMsg, remainingPlayers);
 
-        DebugPanel.Phone.Log("      - PickOne player and send him the PickCategory order ! User: " + currentPlayer);
-
-        sMsg = new SimpleMessage()
+        if (Persistent.GameData.IsServer)
         {
-            MessageCode = (byte)NetMessage.DoPickCategory
-        };
-        Persistent.GameData.RunNetworkServer.OncategoryPicked = OncategoryPicked;
-        Persistent.GameData.RunNetworkServer.SendToClients(sMsg, connectionId: currentConnectionId);
+            if (Persistent.GameData.LoggedUser.ConnectionId != _currentlyPickingConnectionId)
+            {
+                DebugPanel.Phone.Log("      - Send the PickCategory order ! User: " + currentPlayer);
 
-        // here the host needs to recieve the category info too. if he is not to pick.
-        OnCategoryPickingInfo(currentConnectionId);
+                sMsg = new SimpleMessage()
+                {
+                    MessageCode = (byte)NetMessage.DoPickCategory
+                };
+                Persistent.GameData.RunNetworkServer.OnCategoryPicked = OnCategoryPicked;
+                Persistent.GameData.RunNetworkServer.SendToClients(sMsg, connectionId: _currentlyPickingConnectionId);
 
-        // !IMPORTANT
-        // we also need to determine if host is the player that needs to pick category !!!
+                // here the host needs to recieve the category info too. if he is not to pick.
+                OnCategoryPickingInfo();
+            }
+            else
+            {
+                // the server can be asked to pick a category.
+                OnYourTurnToPickCategory();
+            }
+        }
     }
 
-    private void OncategoryPicked(int fromConnectionId, int categoryId)
+    private void OnCategoryPicked(int fromConnectionId, int categoryId, bool randomlyPicked = false)
     {
-        var category = DomainLogic.DB.DataService.GetCategory(categoryId);
+        if (CategoryPicked) return;
+
+        CategoryPicked = true;
+        var category = AllCategories.FirstOrDefault(c => c.Id == categoryId);
         DebugPanel.Phone.Log(" 3. Category was picked, its \"" + category.Name + "\". Now let's find a Good Question.");
 
-        _currentQuestion = DomainLogic.DB.DataService.GetRandomQuestionByCategory(category.Id);
+        _currentQuestion = DomainLogic.DB.DataService.GetRandomQuestionByCategory(category);
 
         DebugPanel.Phone.Log(" 4. Found a question now lets send it to everyone");
         DebugPanel.Phone.Log("       - AND - Wait for everyones response: ");
@@ -194,40 +225,77 @@ public class Game : MonoBehaviour
     private void OnYourTurnToPickCategory()
     {
         if (StartGamePanel.gameObject.activeSelf)
-            StartGamePanel.GameIsReady(() => {
-                SelectCategoryPanel.SetActive(true);
+            StartGamePanel.GameIsReady(() =>
+            {
                 // show input for picking category
+                SelectCategoryPanel.gameObject.SetActive(true);
+                if (Persistent.GameData.IsServer)
+                    SelectCategoryPanel.OnChosingCategory = (categoryId) =>
+                    {
+                        OnCategoryPicked(Persistent.GameData.LoggedUser.ConnectionId, categoryId);
+                    };
+                else
+                    SelectCategoryPanel.OnChosingCategory = OnClientChoseCategory;
+                SelectCategoryPanel.Init(AllCategories);
+                SelectCategoryPanel.InGameClock.OnStop = OnCategoryPickingTimeExpired;
             });
 
         DebugPanel.Phone.Log("      - The SERVER has said it's my turn !");
-
-        // this needs to be called from an input
-        OnChosingCategory();
     }
 
-    private void OnCategoryPickingInfo(int connectionIdThatPicksCategory)
+    private void OnCategoryPickingInfo(int connectionIdThatPicksCategory = 0)
     {
-        if (StartGamePanel.gameObject.activeSelf)
-            StartGamePanel.GameIsReady(() => {
-                SelectCategoryPanel.SetActive(true);
-                // show info message on who is picking.
-            });
+        if (connectionIdThatPicksCategory != 0)
+            _currentlyPickingConnectionId = connectionIdThatPicksCategory;
 
-        var userPicking = Persistent.GameData.ServerUsers.Where(u => u.ConnectionId == connectionIdThatPicksCategory).FirstOrDefault();
+        var userPicking = Persistent.GameData.ServerUsers.Where(u => u.ConnectionId == _currentlyPickingConnectionId).FirstOrDefault();
 
         DebugPanel.Phone.Log("      - The SERVER tolds us that this user is picking: " + userPicking);
 
+        if (StartGamePanel.gameObject.activeSelf)
+            StartGamePanel.GameIsReady(() =>
+            {
+                // show info message on who is picking.
+                SomeoneSelectingCategoryPanel.gameObject.SetActive(true);
+                SomeoneSelectingCategoryPanel.SetWhoIsPicking(userPicking.Name);
+                if (Persistent.GameData.IsServer)
+                {
+                    SomeoneSelectingCategoryPanel.InGameClock.OnStop = OnCategoryPickingTimeExpired;
+                }
+            });
+
         if (Main._.IsSimulated)
-            DebugPanel.Phone.Log("3.    - Press [4](Server will send a question) ...");
+        {
+            if (Persistent.GameData.IsServer)
+            {
+                DebugPanel.Phone.Log("3.    - Press [1](That user will send a Category) ...");
+                DebugPanel.Phone.Log("      - Press [2](Time will expire) ...");
+            }
+            else
+            {
+                DebugPanel.Phone.Log("3.    - Press [4](Server will send a question) ...");
+            }
+        }
     }
 
-    public void OnChosingCategory()
+    IEnumerator GetCategoriesAsync()
     {
+
+        yield return new WaitForSeconds(0.1f);
+        AllCategories = DomainLogic.DB.DataService.GetAllCategories();
+    }
+
+    public void OnClientChoseCategory(int categoryId)
+    {
+        SelectCategoryPanel.InGameClock.StopClock();
+
+        var category = AllCategories.FirstOrDefault(c => c.Id == categoryId);
         var netMsg = new SimpleMessage()
         {
-            MessageText = "Stiri",
+            MessageText = category.Name,
             ThisMessageCodeIsFor = (byte)NetMessage.DoPickCategory
         };
+
         Persistent.GameData.RunNetworkClient.SendToServer(netMsg);
 
         if (Main._.IsSimulated)
@@ -273,14 +341,58 @@ public class Game : MonoBehaviour
 
     public void OnRecievedQuestion(QuestionMessage questionMessage = null)
     {
-        if (questionMessage != null) 
+        if (questionMessage != null)
             _currentQuestion = questionMessage.Question;
 
         DebugPanel.Phone.Log("3.    SERVER sent question: " + _currentQuestion.Text);
 
-        // Display Question
+        if (SelectCategoryPanel.gameObject.activeSelf)
+        {
+            SelectCategoryPanel.InGameClock.StopClock();
+            SelectCategoryPanel.gameObject.SetActive(false);
+        }
+        else if (SomeoneSelectingCategoryPanel.gameObject.activeSelf)
+        {
+            SomeoneSelectingCategoryPanel.InGameClock.StopClock();
+            SomeoneSelectingCategoryPanel.gameObject.SetActive(false);
+        }
 
-        // Display INput
+        // Display Question
+        QuestionAndAnswerPanel.gameObject.SetActive(true);
+        QuestionAndAnswerPanel.Init(_currentQuestion);
+        QuestionAndAnswerPanel.InGameClock.OnStop = OnLieInputTimeExpired;
+        QuestionAndAnswerPanel.OnLieComplete = OnLieComplete;
+    }
+
+    public void OnLieInputTimeExpired()
+    {
+        OnLieComplete(string.Empty);
+    }
+
+    public void OnLieComplete(string lie)
+    {
+        if (Persistent.GameData.IsServer)
+        {
+            OnOthersAddingLies(Persistent.GameData.LoggedUser.ConnectionId, lie);
+        }
+        else
+        {
+            var netMsg = new SimpleMessage()
+            {
+                MessageText = lie,
+                MessageCode = (byte)NetMessage.LieAdded
+            };
+            Persistent.GameData.RunNetworkClient.SendToServer(netMsg);
+
+            // => the client will recieve from the server the fact that he added his lie.
+        }
+    }
+
+    public void OnOthersAddingLies(int connectionId, string lie)
+    {
+        _playersLies[connectionId] = lie;
+        var userThatAddedLie = Persistent.GameData.ServerUsers.FirstOrDefault(su => su.ConnectionId == connectionId);
+        QuestionAndAnswerPanel.ShowAvatarInputed(userThatAddedLie);
     }
 
     #endregion
@@ -318,6 +430,13 @@ public class Game : MonoBehaviour
                 _playersLies[playerId] = string.Empty;
             }
         }
+    }
+
+    private void OnCategoryPickingTimeExpired()
+    {
+        // 1. pick a category randomly so the game can progress.
+        var index = UnityEngine.Random.Range(0, AllCategories.Count - 1);
+        OnCategoryPicked(_currentlyPickingConnectionId, AllCategories[index].Id, true);
     }
 
     #region TimeSpeed DEBUG Functions

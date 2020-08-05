@@ -9,6 +9,8 @@ public class InputFieldCustom : MonoBehaviour
     public Text Label;
     public InputField InputField;
 
+    public bool AllUppercase;
+
     private float _animationSpeed = 0.2f;
 
     private float _labelWidth;
@@ -20,6 +22,12 @@ public class InputFieldCustom : MonoBehaviour
     private float _borderDownHeight;
     private float _borderDownMaxWidth = 340f;
     private float _borderDownMinWidth = 0f;
+
+    public delegate void OnBlurCallback();
+    public OnBlurCallback OnBlurDelegate;
+
+    public delegate void OnChangeCallback();
+    public OnChangeCallback OnChangeDelegate;
 
     private void Start()
     {
@@ -102,5 +110,15 @@ public class InputFieldCustom : MonoBehaviour
         {
             BorderDown.GetComponent<RectTransform>().sizeDelta = new Vector3(value, _borderDownHeight);
         }, _borderDownMaxWidth, _borderDownMinWidth, _animationSpeed);
+
+        OnBlurDelegate?.Invoke();
+    }
+
+    public void OnChange()
+    {
+        if (AllUppercase)
+            InputField.text = InputField.text.ToUpper();
+
+        OnChangeDelegate?.Invoke();
     }
 }

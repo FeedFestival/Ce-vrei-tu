@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using Assets.Scripts.Utils;
-using SQLite4Unity3d;
 using UnityEngine;
 using System.Collections;
 using System;
 using System.Net;
+using SQLite4Unity3d;
 
 #region User
 
@@ -59,6 +59,14 @@ public class Category
     public int Id { get; set; }
     public string Name { get; set; }
 
+    public string File { get; set; }
+
+    public string PlayedQuestionLines { get; set; }
+
+    public int MaxLines { get; set; }
+
+    public string Color { get; set; }
+
     public Category()
     {
 
@@ -69,6 +77,33 @@ public class Category
         Id = DataUtils.GetIntDataValue(properties, "ID:");
         Name = DataUtils.GetDataValue(properties, "Name:");
     }
+
+    public int[] PlayedLines;
+
+    public void FormatPlayedLines()
+    {
+        if (string.IsNullOrWhiteSpace(PlayedQuestionLines)) return;
+
+        string[] linesNrString = System.Text.RegularExpressions.Regex.Split(PlayedQuestionLines, ";");
+        PlayedLines = new int[linesNrString.Length];
+        var index = 0;
+        foreach (string lineNr in linesNrString)
+        {
+            if (string.IsNullOrWhiteSpace(lineNr)) break;
+            int.TryParse(lineNr, out PlayedLines[index]);
+        }
+    }
+
+    public void FormatPlayedQuestionLines()
+    {
+        if (PlayedLines == null || PlayedLines.Length == 0) return;
+
+        PlayedQuestionLines = "";
+        foreach (int nr in PlayedLines)
+        {
+            PlayedQuestionLines += nr + ";";
+        }
+    }
 }
 
 #endregion
@@ -78,16 +113,13 @@ public class Category
 
 public class Question
 {
-    [PrimaryKey, AutoIncrement]
-    public int Id { get; set; }
     public string Text { get; set; }
     public string Corect { get; set; }
     public string Prank { get; set; }
+
     public int CategoryId { get; set; }
-
-    public string CategoryName;
-
-    public bool Played { get; set; }
+    
+    public int LineNumber { get; set; }
 
     public Question()
     {
@@ -97,17 +129,17 @@ public class Question
     public string JSONString()
     {
         return string.Format(
-@"Id: {0},
-Text: {1},
-Corect: {2},
-Prank: {3},
-CategoryId: {4},
-            ",
-Id,
-Text,
-Corect,
-Prank,
-CategoryId
+            @"Text: {0},
+            Corect: {1},
+            Prank: {2},
+            CategoryId: {3},
+            LineNumber: {4}
+                        ",
+            Text,
+            Corect,
+            Prank,
+            CategoryId,
+            LineNumber
             );
     }
 }

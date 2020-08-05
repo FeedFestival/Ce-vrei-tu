@@ -31,8 +31,8 @@ public class RunNetworkServer : MonoBehaviour
     public delegate void OnClientsAcceptedStartingGameCallback(int fromConnectionId, NetMessage netMessage);
     public OnClientsAcceptedStartingGameCallback OnClientsAcceptedStartingGame;
 
-    public delegate void OncategoryPickedCallback(int fromConnectionId, int categoryId);
-    public OncategoryPickedCallback OncategoryPicked;
+    public delegate void OncategoryPickedCallback(int fromConnectionId, int categoryId, bool randomlyPicked = false);
+    public OncategoryPickedCallback OnCategoryPicked;
 
     public delegate void OnClientsAddedLiesCallback(int fromConnectionId, string lie);
     public OnClientsAddedLiesCallback OnClientsAddedLies;
@@ -202,7 +202,7 @@ public class RunNetworkServer : MonoBehaviour
                 }
                 else if ((NetMessage)sMsg.ThisMessageCodeIsFor == NetMessage.DoPickCategory)
                 {
-                    OncategoryPicked(fromConnectionId, sMsg.MessageId);
+                    OnCategoryPicked(fromConnectionId, sMsg.MessageId);
                 }
 
                 //OnSimpleMessage(fromConnectionId, msg);

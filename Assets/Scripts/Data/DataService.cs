@@ -1,5 +1,4 @@
-﻿using SQLite4Unity3d;
-using UnityEngine;
+﻿using UnityEngine;
 #if !UNITY_EDITOR
 using System.Collections;
 using System.IO;
@@ -9,10 +8,14 @@ using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using Assets.Scripts.Utils;
 using System;
+using SQLite4Unity3d;
+using System.IO;
 
 public class DataService
 {
     private SQLiteConnection _connection;
+
+    private int _minReplacementTextLength = 7;
 
     public DataService(string DatabaseName)
     {
@@ -32,31 +35,28 @@ public class DataService
             // if it doesn't ->
             // open StreamingAssets directory and load the db ->
 
-#if UNITY_ANDROID
+    #if UNITY_ANDROID
             var loadDb = new WWW("jar:file://" + Application.dataPath + "!/assets/" + DatabaseName);  // this is the path to your StreamingAssets in android
             while (!loadDb.isDone) { }  // CAREFUL here, for safety reasons you shouldn't let this while loop unattended, place a timer and error check
             // then save to Application.persistentDataPath
             File.WriteAllBytes(filepath, loadDb.bytes);
-#elif UNITY_IOS
-                 var loadDb = Application.dataPath + "/Raw/" + DatabaseName;  // this is the path to your StreamingAssets in iOS
-                // then save to Application.persistentDataPath
-                File.Copy(loadDb, filepath);
-#elif UNITY_WP8
-                var loadDb = Application.dataPath + "/StreamingAssets/" + DatabaseName;  // this is the path to your StreamingAssets in iOS
-                // then save to Application.persistentDataPath
-                File.Copy(loadDb, filepath);
-
-#elif UNITY_WINRT
-		var loadDb = Application.dataPath + "/StreamingAssets/" + DatabaseName;  // this is the path to your StreamingAssets in iOS
-		// then save to Application.persistentDataPath
-		File.Copy(loadDb, filepath);
-#else
-	var loadDb = Application.dataPath + "/StreamingAssets/" + DatabaseName;  // this is the path to your StreamingAssets in iOS
-	// then save to Application.persistentDataPath
-	File.Copy(loadDb, filepath);
-
+    #elif UNITY_IOS
+            var loadDb = Application.dataPath + "/Raw/" + DatabaseName;  // this is the path to your StreamingAssets in iOS
+            // then save to Application.persistentDataPath
+            File.Copy(loadDb, filepath);
+    #elif UNITY_WP8
+            var loadDb = Application.dataPath + "/StreamingAssets/" + DatabaseName;  // this is the path to your StreamingAssets in iOS
+            // then save to Application.persistentDataPath
+            File.Copy(loadDb, filepath);
+    #elif UNITY_WINRT
+		    var loadDb = Application.dataPath + "/StreamingAssets/" + DatabaseName;  // this is the path to your StreamingAssets in iOS
+		    // then save to Application.persistentDataPath
+		    File.Copy(loadDb, filepath);
+    #else
+	        var loadDb = Application.dataPath + "/StreamingAssets/" + DatabaseName;  // this is the path to your StreamingAssets in iOS
+	        // then save to Application.persistentDataPath
+	        File.Copy(loadDb, filepath);
 #endif
-
             Debug.Log("Database written");
         }
 
@@ -86,17 +86,12 @@ public class DataService
         Debug.Log("Created CATEGORY TABLE");
     }
 
-    public void RecreateQuestionTable()
+    public void WriteCategoriesData(List<Category> categories, bool update = false)
     {
-        _connection.DropTable<Question>();
-        _connection.CreateTable<Question>();
-
-        Debug.Log("Created QUESTION TABLE");
-    }
-
-    public void WriteCategoriesData(List<Category> categories)
-    {
-        _connection.InsertAll(categories);
+        if (update)
+            _connection.UpdateAll(categories);
+        else
+            _connection.InsertAll(categories);
     }
 
     public List<Category> GetAllCategories()
@@ -109,63 +104,50 @@ public class DataService
         return _connection.Table<Category>().Where(c => c.Id == categoryId).FirstOrDefault();
     }
 
-    public void WriteQuestionsData(List<Question> questions)
+    public Question GetRandomQuestionByCategory(Category category = null)
     {
-        var savedCount = 0;
-        var updatedCount = 0;
-        foreach (Question question in questions)
+        if (category == null) category = new Category();
+
+        var filePath = UsefullUtils.GetPathToStreamingAssetsFile(category.File + ".html");
+        var lineNumber = 1;
+        var question = new Question() {
+            LineNumber = lineNumber,
+            CategoryId = category.Id,
+            Text = File.ReadLines(filePath).ElementAtOrDefault(lineNumber - 1)
+        };
+        
+        if (string.IsNullOrWhiteSpace(question.Text)) return null;
+
+        string[] values = question.Text.Split('<', '>');
+        question.Text = string.Empty;
+        int variableIndex = 0;
+        foreach (string value in values)
         {
-            var existingQuestion = _connection.Table<Question>().Where(x => x.Corect == question.Corect && x.Prank == question.Prank && x.CategoryId == question.CategoryId).FirstOrDefault();
-            if (existingQuestion == null)
+            if (value.Length == 0) continue;
+
+            if (value[0] == '_')
             {
-                _connection.Insert(question);
-                savedCount++;
+                if (variableIndex == 0)
+                {
+                    question.Corect = value.Substring(1, value.Length - 1).ToUpper();
+                    for (var c = 0; c < _minReplacementTextLength; c++)
+                    {
+                        question.Text += "_";
+                    }
+                }
+                else if (variableIndex == 1)
+                {
+                    question.Prank = value.Substring(1, value.Length - 1).ToUpper();
+                }
+                variableIndex++;
             }
             else
             {
-                _connection.Update(question);
-                updatedCount++;
+                question.Text += value;
             }
         }
-        //_connection.InsertAll(questions);
 
-        Debug.Log("Saved " + savedCount + " questions and updated " + updatedCount + " questions.");
-    }
-
-    public List<Question> GetAllQuestions()
-    {
-        return _connection.Table<Question>().ToList();
-    }
-
-    public int[] GetQuestionsIdsByCategory(int categoryId)
-    {
-        return _connection.Table<Question>().Where(q => q.CategoryId == categoryId && q.Played == false).Select(q => q.Id).ToArray();
-    }
-
-    public Question GetQuestion(int questionId)
-    {
-        return _connection.Table<Question>().Where(q => q.Id == questionId).FirstOrDefault();
-    }
-
-    public Question GetRandomQuestionByCategory(int? categoryId = null)
-    {
-        int[] questionIds;
-        if (categoryId == null)
-            questionIds = _connection.Table<Question>().ToList().Select(q => q.Id).ToArray();
-        else
-            questionIds = _connection.Table<Question>().Where(q => q.CategoryId == categoryId && q.Played == false).ToList().Select(q => q.Id).ToArray();
-
-        if (questionIds == null || questionIds.Length == 0)
-        {
-            // reset the question played state
-            ResetQuestionPlayedState(categoryId);
-            return GetRandomQuestionByCategory(categoryId);
-        }
-
-        var index = UnityEngine.Random.Range(0, questionIds.Length - 1);
-        var questionId = questionIds[index];
-
-        return GetQuestion(questionId);
+        return question;
     }
 
     public void ResetQuestionPlayedState(int? categoryId)
@@ -200,15 +182,10 @@ public class DataService
         return _connection.Table<User>().Where(x => x.Id == 1).FirstOrDefault();
     }
 
-    //public User GetLastUser()
-    //{
-    //    return _connection.Table<User>().Last();
-    //}
-
-    //public User GetUserByFacebookId(int facebookId)
-    //{
-    //    return _connection.Table<User>().Where(x => x.FacebookApp.FacebookId == facebookId).FirstOrDefault();
-    //}
+    public User GetLastUser()
+    {
+        return _connection.Table<User>().Last();
+    }
 
     /*
     * User - END

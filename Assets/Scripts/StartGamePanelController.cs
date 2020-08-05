@@ -32,6 +32,13 @@ public class StartGamePanelController : MonoBehaviour
     {
         LoadingController.HideLoading();
 
+        if (Persistent.GameData.IsServer)
+        {
+            gameObject.SetActive(false);
+            onGameReady();
+            return;
+        }
+
         if (_infoFullyRead)
         {
             onGameReady();

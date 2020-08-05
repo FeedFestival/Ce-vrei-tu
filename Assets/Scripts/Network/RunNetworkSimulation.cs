@@ -124,7 +124,7 @@ public class RunNetworkSimulation : MonoBehaviour
 
                     sMsg = new SimpleMessage()
                     {
-                        MessageCode = (byte)Expected_MessageCode,
+                        MessageCode = (byte)Expected_MessageCode,   // ie: StartingGame
                         ThisMessageCodeIsFor = (byte)NetMessage.StartingGame
                     };
                     break;
@@ -142,7 +142,26 @@ public class RunNetworkSimulation : MonoBehaviour
             if (sMsg != null)
             {
                 foreach (int id in _connIds)
+                {
+
                     OnData(id, 0, 0, sMsg);
+                }
+            }
+        }
+
+        if (Input.GetKeyUp(KeyCode.Alpha1) || Input.GetKeyUp(KeyCode.Keypad1))
+        {
+            var categoryId = 1;
+            var sMsg = new SimpleMessage()
+            {
+                MessageCode = (byte)Expected_MessageCode,
+                MessageId = (byte)categoryId,
+                ThisMessageCodeIsFor = (byte)NetMessage.DoPickCategory
+            };
+            if (sMsg != null)
+            {
+                
+                OnData(0, 0, 0, sMsg);
             }
         }
     }

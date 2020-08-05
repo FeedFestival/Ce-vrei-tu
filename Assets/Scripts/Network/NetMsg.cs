@@ -15,7 +15,8 @@ public enum NetMessage
     StartingGame,
     DoPickCategory,
     ConnectionIsPickingCategory,
-    ThisIsTheQuestion
+    ThisIsTheQuestion,
+    LieAdded
 }
 
 [System.Serializable]
